@@ -1,0 +1,21 @@
+name: Experiment Doctor
+
+on:
+  pull_request:
+    paths:
+      - "demo/**"
+      - ".experiment-doctor.json"
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Experiment integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # In another repository: uses: Mohammad-Umar7/experiment-doctor@main
+      - uses: ./
