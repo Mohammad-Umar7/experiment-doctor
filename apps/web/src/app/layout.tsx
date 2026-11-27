@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Nav } from "@/components/site/nav";
+import { NavFallback } from "@/components/site/nav-fallback";
 import { Footer } from "@/components/site/footer";
 import { Providers } from "@/components/site/providers";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
@@ -55,7 +57,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <Providers>
-          <Nav />
+          <Suspense fallback={<NavFallback />}>
+            <Nav />
+          </Suspense>
           <main id="main" className="flex flex-1 flex-col">
             {children}
           </main>
