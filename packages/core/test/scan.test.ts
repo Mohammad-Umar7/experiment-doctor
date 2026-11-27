@@ -139,6 +139,17 @@ root.render(
     expect(ev.scannedFiles).toBe(1);
   });
 
+  it('finds experiment updates through PUT or update_experiment', () => {
+    const ev = scanFiles([
+      { path: 'scripts/rename.ts', content: `await fetch(\`\${API}/api/v1/environments/\${env}/experiments/\${id}/\`, {
+  method: 'PUT',
+  body,
+});` },
+      { path: 'agent/tools.ts', content: `await mcp.call('update_experiment', { experiment_id: 1 });` },
+    ]);
+    expect(ev.experimentUpdates!.map((u) => `${u.via}@${u.loc.file}:${u.loc.line}`)).toEqual(['mcp-update_experiment@agent/tools.ts:1', 'http-put@scripts/rename.ts:1']);
+  });
+
   it('uses installed versions from node_modules manifests', () => {
     const ev = scanFiles([
       { path: 'package.json', content: JSON.stringify({ dependencies: { '@flagsmith/nodejs': '^9.0.0' } }) },

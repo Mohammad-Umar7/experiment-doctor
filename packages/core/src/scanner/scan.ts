@@ -246,6 +246,7 @@ interface Collected {
   exposures: ExposureCallEvidence[];
   flushes: FlushEvidence[];
   exits: ExitEvidence[];
+  experimentUpdates: NonNullable<CodeEvidence['experimentUpdates']>;
 }
 
 function isAwaited(ctx: FileCtx, receiverStart: number, close: number): boolean {
@@ -516,6 +517,13 @@ function collectCalls(ctx: FileCtx, global: Map<string, string>, out: Collected,
     }
   }
 
+  // experiment updates through the MCP tool or a PUT (Flagsmith #9136)
+  for (const m of code.matchAll(/\bupdate_experiment\b/g)) out.experimentUpdates.push({ loc: makeLoc(ctx, m.index!), via: 'mcp-update_experiment' });
+  for (const m of code.matchAll(/['"`][^'"`\n]*\/experiments\/[^'"`\n]*['"`]/g)) {
+    const around = code.slice(Math.max(0, m.index! - 200), m.index! + m[0].length + 300);
+    if (/method\s*:\s*['"]PUT['"]|\.put\s*\(|-X\s*PUT\b/i.test(around)) out.experimentUpdates.push({ loc: makeLoc(ctx, m.index!), via: 'http-put' });
+  }
+
   // exits
   for (const m of skel.matchAll(/\bprocess\.exit\s*\(/g)) out.exits.push({ loc: makeLoc(ctx, m.index!), kind: 'process.exit' });
   for (const r of ctx.handlerRanges) out.exits.push({ loc: makeLoc(ctx, r.start), kind: r.kind });
@@ -631,7 +639,7 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
   const globalClients = new Map<string, Sdk>();
   for (const c of ctxs) for (const [k, v] of c.clients) if (!globalClients.has(k)) globalClients.set(k, v);
 
-  const out: Collected = { inits: [], identifies: [], experimentFlags: [], plainFlagReads: [], trackEvents: [], exposures: [], flushes: [], exits: [] };
+  const out: Collected = { inits: [], identifies: [], experimentFlags: [], plainFlagReads: [], trackEvents: [], exposures: [], flushes: [], exits: [], experimentUpdates: [] };
   const summaries: FileSummary[] = [];
   for (const c of ctxs) {
     const before = countAll(out);
@@ -661,6 +669,7 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
   };
   if (options.root) evidence.root = options.root;
   if (usesFlagsmithMcp) evidence.usesFlagsmithMcp = true;
+  if (out.experimentUpdates.length) evidence.experimentUpdates = out.experimentUpdates.sort(byLoc);
   return evidence;
 }
 
