@@ -45,7 +45,7 @@ AFTER   identity doctor-probe-mwzet3ec, after the approved patch
 | **T2 AI Agents and Feature Flags** | [CLI: approval gates, fail-closed allowlist](docs/cli.md) · [failing PR #1](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [passing PR #2](https://github.com/Mohammad-Umar7/experiment-doctor/pull/2) |
 | **T3 Build on Open Source Flagsmith** | [Reproducible self-hosted lab with per-identity verification](selfhost) |
 | **T4 Flagsmith Agent Skills** | [The skill](skills/flagsmith-experiment-doctor) · [measured benchmark, losses included](bench/BENCHMARK.md) |
-| **All tracks: precision on real code** | [Field audit on 8 public repos: 4/8 false alarms before, 0/8 after](docs/field-audit.md) |
+| **All tracks: tested on code we did not write** | [External code audit: false alarms reduced from 4/8 to 0/8](docs/field-audit.md) |
 
 > **The Doctor caught a bug in its own setup.** While seeding the self-hosted experiment we sent the variation with `key: "one_click"` inside `multivariate_options` on feature create. The stored variation came back with `key: null`, so its exposures would never be attributed. We did not plant this: Experiment Doctor reported it as ED-001 on its first run against the lab. Details: [selfhost/README.md](selfhost/README.md).
 
@@ -107,9 +107,18 @@ npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-docto
 npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-doctor verify   # patch, pipeline, experiment
 ```
 
-`doctor.tgz` redirects to the [v0.1.0 release](https://github.com/Mohammad-Umar7/experiment-doctor/releases/tag/v0.1.0) tarball: the engine is bundled, no runtime dependencies. Full reference: [docs/cli.md](docs/cli.md).
+`doctor.tgz` redirects to the [v0.2.0 release](https://github.com/Mohammad-Umar7/experiment-doctor/releases/tag/v0.2.0) tarball: the engine is bundled, no runtime dependencies. Full reference: [docs/cli.md](docs/cli.md).
 
 Or skip installing anything: paste your code into the [browser Doctor](https://experimentdoctor.vercel.app/report). It runs the same engine locally in the page.
+
+### Give your coding agent the skill
+
+```bash
+cp -r skills/flagsmith-experiment-doctor ~/.claude/skills/     # or .claude/skills/ in your project
+npm i -D https://github.com/Mohammad-Umar7/experiment-doctor/releases/download/v0.2.0/experiment-doctor-0.2.0.tgz
+```
+
+The second line is optional. Without it, the skill's `scripts/run-doctor.mjs` runs the pinned release tarball. It never fetches the bare name `experiment-doctor` from the npm registry, because we don't publish there.
 
 ### Add the CI Gate
 
@@ -122,7 +131,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
-      - uses: Mohammad-Umar7/experiment-doctor@v0.1.0
+      - uses: Mohammad-Umar7/experiment-doctor@v0.2.0
 ```
 
 Describe your experiment in `.experiment-doctor.json`:
@@ -191,7 +200,7 @@ The Doctor is not faster on trivial cases. It wins where Flagsmith-specific know
 - On Flagsmith Cloud the Doctor cannot read individual events, so a probe there ends at *accepted* or *pending*, never *verified*. Per-identity verification needs an event store we can read, like the self-hosted lab's.
 - Zero conversions is not automatically a bug. Without evidence of a defect the Doctor says *pending* or *unverifiable*.
 - Upstream bug matches say "may be consistent with", never "not your fault".
-- **The first field run had false alarms.** On 8 public repositories that call `getExperimentFlag`, the first version flagged 4 as repair-required, and all 4 were wrong: test files, a bundled SDK copy, a monorepo with two apps, and options built by a helper. After two rounds of fixes, 0 of 8 are flagged and no code check fails. That run was code-only, so it measures precision, not recall. Anonymized before-and-after results: [docs/field-audit.md](docs/field-audit.md).
+- **The first field run had false alarms.** On 8 public repositories that call `getExperimentFlag`, the first version flagged 4 as repair-required, and all 4 were wrong: test files, a bundled SDK copy, a monorepo with two apps, and options built by a helper. After two rounds of fixes, 0 of 8 are flagged and no code check fails. That run was code-only and reran the same 8 repositories after the fixes, so it shows fewer false alarms there, not general accuracy. Anonymized before-and-after results: [docs/field-audit.md](docs/field-audit.md).
 
 ## Repository
 
