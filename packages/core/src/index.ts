@@ -9,7 +9,7 @@ export * from './constants';
 export { diagnose, verdictOf, compareFindings, type DiagnoseOptions } from './diagnose';
 export { buildPipeline, buildLayers, PIPELINE, LAYERS } from './pipeline';
 export { toAgentSummary, nextStep, type AgentSummary } from './summary';
-export { compareReports, type Comparison, type RepairStatus } from './compare';
+export { compareReports, type Verification, type PatchStatus, type PipelineStatus, type ExperimentLevelStatus, type PipelineProbe } from './compare';
 export { scanFiles, type SourceFile, type ScanOptions } from './scanner/scan';
 export { lex, LineIndex } from './scanner/lexer';
 export { ALL_RULES, buildContext } from './rules';
