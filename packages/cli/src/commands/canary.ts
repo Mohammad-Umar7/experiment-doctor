@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import {
   DEFAULT_EVENTS_API_URL,
   DEFAULT_SDK_API_URL,
@@ -5,51 +6,60 @@ import {
   TOOL_VERSION,
   ensureTrailingSlash,
   eventsEndpoint,
-  mapWarehouses,
   originOf,
   redactDeep,
   scanFiles,
   stringLiteral,
   type ConfigEvidence,
 } from '@experiment-doctor/core';
-import { resolve } from 'node:path';
 import { experimentId, parse, UsageError } from '../args';
 import { makePalette } from '../color';
 import { readSourceFiles } from '../files';
-import { collectConfig, FlagsmithCli } from '../flagsmith';
+import { collectConfig } from '../flagsmith';
 import type { Io } from '../io';
-import { looksLikeProduction } from '../safety';
+import { authorizeMutation, loadPolicy, POLICY_FILE } from '../safety';
 import { saveState } from '../state';
 
-export const CANARY_HELP = `experiment-doctor canary: active probe, only with your confirmation
+export const CANARY_HELP = `experiment-doctor canary: active ingestion probe, only with your confirmation
 
-Usage: experiment-doctor canary --environment <name|key> [options]
+Usage: experiment-doctor canary --environment <name|key> --allow-env <name|key> [options]
 
   --environment <name|key> the environment to probe (required, you name it)
+  --allow-env <name|key>   allowlist this environment for changes (repeatable), or
+                           list it under "allowMutations" in ${POLICY_FILE}
   --flag <key>             experiment flag (default: from the experiment)
   --experiment <id>        experiment id
   --event <name>           conversion event (default: the experiment's first metric)
   --dir <path>             app code, used to find the events URL your app uses (default: .)
   --events-url <url>       override the events URL (the SDK's eventsApiUrl)
   --sdk-url <url>          override the SDK API URL (the SDK's api)
-  --wait <seconds>         how long to watch for arrival (default 60)
-  --yes                    skip the typed confirmation
+  --yes                    skip the typed confirmation (never skips the allowlist)
   --dry-run                print the plan and stop
-  --allow-production       allow an environment that looks like production
   --json                   machine output
 
-Sends one exposure and one conversion for a new identity named
-doctor-canary-<random>, using the same HTTP endpoints the SDKs use, then watches
-the warehouse for them. The identity stays in that environment's data.
-Result: VERIFIED (events arrived), FAILED (rejected or unreachable),
-PENDING (accepted, not visible yet: processing delay is normal).`;
+What it does: reads the flags of a new identity doctor-canary-<random> over
+the SDK HTTP API, then posts one exposure and one conversion for it to the
+events endpoint, exactly as the SDKs do. The identity stays in that
+environment's data.
 
-export type CanaryStatus = 'VERIFIED' | 'FAILED' | 'PENDING';
+What it proves: Flagsmith ingestion over HTTP. It does NOT exercise your app's
+own SDK instrumentation (that is what check's code rules are for), and
+Flagsmith offers no identity-level read, so it cannot prove the events were
+stored. Result:
+  ACCEPTED  ingestion answered 2xx and accepted both events
+  FAILED    rejected, unreachable, flag or experiment not served, or no variation key
+  PENDING   nothing conclusive (for example the identity was outside the rollout)`;
+
+export type CanaryStatus = 'ACCEPTED' | 'FAILED' | 'PENDING';
 
 export interface CanaryResult {
   status: CanaryStatus;
   identity: string;
   environment: string;
+  /** Always false: no Flagsmith API reads back one identity's events. */
+  identityLevel: false;
+  /** What the probe exercised. */
+  scope: 'ingestion-http';
   steps: { step: string; ok: boolean | null; detail: string; ms?: number }[];
   message: string;
   maxLatencyMs: number;
@@ -62,19 +72,21 @@ interface IdentityFlag {
   metadata?: { experiment?: { id?: number; in_experiment?: boolean } };
 }
 
+const SCOPE_NOTE = 'This probe exercises Flagsmith ingestion over HTTP, not your app\'s SDK instrumentation.';
+const NO_READBACK = 'Flagsmith offers no identity-level read, so storage of these two events cannot be proven here: refresh the results later and look for the exposure.';
+
 export async function canaryCommand(io: Io, argv: string[]): Promise<number> {
   const { values } = parse(argv, {
     environment: { type: 'string' },
+    'allow-env': { type: 'string', multiple: true },
     flag: { type: 'string' },
     experiment: { type: 'string' },
     event: { type: 'string' },
     dir: { type: 'string' },
     'events-url': { type: 'string' },
     'sdk-url': { type: 'string' },
-    wait: { type: 'string', default: '60' },
     yes: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
-    'allow-production': { type: 'boolean', default: false },
     json: { type: 'boolean', default: false },
     help: { type: 'boolean', short: 'h', default: false },
   });
@@ -83,8 +95,6 @@ export async function canaryCommand(io: Io, argv: string[]): Promise<number> {
     return 0;
   }
   if (!values.environment) throw new UsageError('canary needs --environment <name|key>: name the environment you want to probe.');
-  const waitSeconds = Number(values.wait);
-  if (!Number.isFinite(waitSeconds) || waitSeconds < 0 || waitSeconds > 900) throw new UsageError('--wait must be between 0 and 900 seconds');
   const c = makePalette(io.env, io.stdout.isTTY);
   const say = (s: string) => {
     if (!values.json) io.stdout.write(`${s}\n`);
@@ -98,9 +108,7 @@ export async function canaryCommand(io: Io, argv: string[]): Promise<number> {
     throw new UsageError(`Cannot reach environment "${values.environment}" through the Flagsmith CLI.\n${collected.problems.join('\n')}`);
   }
   const envName = config.environment.name;
-  if (looksLikeProduction(envName) && !values['allow-production']) {
-    throw new UsageError(`"${envName}" looks like production. The canary writes an identity and events there. Use a test environment, or pass --allow-production.`);
-  }
+  const auth = authorizeMutation(loadPolicy(root, values['allow-env'] ?? []), { name: envName, key: envKey });
   const flag = values.flag ?? config.flag?.name;
   const event = values.event ?? config.metrics?.[0]?.event;
   if (!flag) throw new UsageError('No experiment flag found: pass --flag <key>.');
@@ -112,17 +120,21 @@ export async function canaryCommand(io: Io, argv: string[]): Promise<number> {
     [
       '',
       `  ${c.accent('◆')} ${c.bold('Canary probe')} → environment ${c.bold(`"${envName}"`)}`,
-      `  identity  ${identity}  ${c.muted('(it will appear in this environment\'s identities and experiment data)')}`,
+      `  ${c.muted(SCOPE_NOTE)}`,
+      `  identity  ${identity}  ${c.muted("(it will appear in this environment's identities and experiment data)")}`,
       `  1. GET  ${urls.sdk}identities/?identifier=${identity}   ${c.muted('reads its flags (creates the identity)')}`,
       `  2. POST ${eventsEndpoint(urls.events)}   ${c.muted(`1 ${EXPOSURE_EVENT_NAME} for "${flag}" + 1 "${event}"`)}`,
-      `  3. watch warehouse-connections for up to ${waitSeconds}s   ${c.muted('read only')}`,
+      `  ${auth.ok ? c.healthy(`allowlisted (${auth.matched})`) : c.critical('not allowlisted')}${auth.ok && auth.warning ? `  ${c.warning(auth.warning)}` : ''}`,
       '',
     ].join('\n'),
   );
   if (values['dry-run']) {
-    if (values.json) io.stdout.write(`${JSON.stringify({ status: 'DRY_RUN', identity, environment: envName, sdkUrl: urls.sdk, eventsEndpoint: eventsEndpoint(urls.events), flag, event })}\n`);
+    if (values.json) {
+      io.stdout.write(`${JSON.stringify({ status: 'DRY_RUN', identity, environment: envName, allowed: auth.ok, scope: 'ingestion-http', sdkUrl: urls.sdk, eventsEndpoint: eventsEndpoint(urls.events), flag, event })}\n`);
+    }
     return 0;
   }
+  if (!auth.ok) throw new UsageError(auth.reason);
   if (!values.yes) {
     const answer = (await io.prompt(`  Type the environment name ("${envName}") to send the probe: `)).trim();
     if (answer !== envName) {
@@ -132,16 +144,16 @@ export async function canaryCommand(io: Io, argv: string[]): Promise<number> {
     }
   }
 
-  const result = await probe(io, { envKey, envName, flag, event, identity, urls, waitSeconds, baseline: config.warehouses?.find((w) => w.status === 'connected')?.totalEventsReceived ?? null });
+  const result = await probe(io, { envKey, envName, flag, event, identity, urls });
   saveState(root, 'canary.json', { at: io.now().toISOString(), ...result }, [envKey]);
   if (values.json) {
     io.stdout.write(`${JSON.stringify(redactDeep(result, [envKey]))}\n`);
   } else {
     for (const s of result.steps) say(`  ${s.ok === true ? c.healthy('✓') : s.ok === false ? c.critical('✕') : c.warning('◔')} ${s.step}  ${c.muted(s.detail)}${s.ms !== undefined ? c.muted(` (${s.ms} ms)`) : ''}`);
-    const badge = result.status === 'VERIFIED' ? c.healthy(c.bold('✓ VERIFIED')) : result.status === 'FAILED' ? c.critical(c.bold('✕ FAILED')) : c.warning(c.bold('◔ PENDING'));
+    const badge = result.status === 'ACCEPTED' ? c.info(c.bold('→ ACCEPTED')) : result.status === 'FAILED' ? c.critical(c.bold('✕ FAILED')) : c.warning(c.bold('◔ PENDING'));
     say(`\n  ${badge}  ${result.message}\n`);
     if (config.environment.selfHosted && result.maxLatencyMs >= 2500) {
-      say(`  ${c.warning('!')} A request took ${result.maxLatencyMs} ms. Possible upstream bug: Flagsmith #9132 (Postgres JIT). Workaround: run postgres with -c jit=off.\n`);
+      say(`  ${c.warning('!')} A request took ${result.maxLatencyMs} ms. Symptoms may be consistent with Flagsmith issue #9132 (Postgres JIT, open). Confirm the slow statement before applying its workaround (postgres -c jit=off).\n`);
     }
   }
   return result.status === 'FAILED' ? 1 : 0;
@@ -171,13 +183,19 @@ async function timed<T>(io: Io, f: () => Promise<T>): Promise<{ value: T; ms: nu
   return { value, ms: Math.max(0, io.now().getTime() - t0) };
 }
 
-async function probe(
-  io: Io,
-  p: { envKey: string; envName: string; flag: string; event: string; identity: string; urls: Urls; waitSeconds: number; baseline: number | null },
-): Promise<CanaryResult> {
+async function probe(io: Io, p: { envKey: string; envName: string; flag: string; event: string; identity: string; urls: Urls }): Promise<CanaryResult> {
   const steps: CanaryResult['steps'] = [];
   let max = 0;
-  const done = (status: CanaryStatus, message: string): CanaryResult => ({ status, identity: p.identity, environment: p.envName, steps, message, maxLatencyMs: max });
+  const done = (status: CanaryStatus, message: string): CanaryResult => ({
+    status,
+    identity: p.identity,
+    environment: p.envName,
+    identityLevel: false,
+    scope: 'ingestion-http',
+    steps,
+    message,
+    maxLatencyMs: max,
+  });
   const headers = { 'X-Environment-Key': p.envKey, 'Content-Type': 'application/json; charset=utf-8', 'Flagsmith-SDK-User-Agent': `experiment-doctor-canary/${TOOL_VERSION}` };
 
   // 1. Identity flags: is the canary enrolled, and in which variation?
@@ -199,7 +217,7 @@ async function probe(
   if (!flag) return done('FAILED', `Flag "${p.flag}" is not served in "${p.envName}".`);
   const exp = flag.metadata?.experiment;
   if (!exp) return done('FAILED', `No running experiment is attached to "${p.flag}" (the flag has no experiment metadata).`);
-  if (!exp.in_experiment) return done('PENDING', 'The canary identity is outside the experiment rollout, so no exposure was sent. Run the canary again, or raise the rollout.');
+  if (!exp.in_experiment) return done('PENDING', 'The canary identity is outside the experiment rollout, so no exposure was sent. Nothing is proven either way: run the canary again, or check the rollout.');
   if (!flag.variant) return done('FAILED', 'The served variation has no key, so its exposure cannot be counted (see ED-001).');
 
   // 2. Send one exposure and one conversion, like the SDK's event processor.
@@ -209,53 +227,31 @@ async function probe(
     { event: EXPOSURE_EVENT_NAME, feature_name: p.flag, identifier: p.identity, value: flag.variant, traits: null, metadata: meta, timestamp: now },
     { event: p.event, feature_name: null, identifier: p.identity, value: null, traits: null, metadata: meta, timestamp: now + 1 },
   ];
-  const sentAt = new Date(now).toISOString();
   try {
     const { value: res, ms } = await timed(io, () => io.fetch(eventsEndpoint(p.urls.events), { method: 'POST', headers, body: JSON.stringify({ events }) }));
     max = Math.max(max, ms);
-    let body: { accepted?: number; rejected?: { index: number; error: string }[]; detail?: string } = {};
-    try {
-      body = (await res.json()) as typeof body;
-    } catch {
-      // some errors are plain text
-    }
+    type Batch = { accepted?: number; rejected?: { index: number; error: string }[]; detail?: string };
+    const body: Batch | null = await res.json().then(
+      (j: unknown) => (j && typeof j === 'object' ? (j as Batch) : null),
+      () => null, // some answers are plain text
+    );
     if (!res.ok) {
-      steps.push({ step: 'Send exposure + conversion', ok: false, detail: `HTTP ${res.status}${body.detail ? `: ${body.detail}` : ''}`, ms });
-      return done('FAILED', res.status === 404 ? `The events endpoint ${eventsEndpoint(p.urls.events)} does not take events for this environment (wrong events URL or no warehouse: ED-006 / ED-007).` : `The events API rejected the batch (HTTP ${res.status}).`);
+      steps.push({ step: 'Send exposure + conversion', ok: false, detail: `HTTP ${res.status}${body?.detail ? `: ${body.detail}` : ''}`, ms });
+      return done(
+        'FAILED',
+        res.status === 404
+          ? `The events endpoint ${eventsEndpoint(p.urls.events)} does not take events for this environment (wrong events URL or no warehouse: ED-006 / ED-007).`
+          : `The events API rejected the batch (HTTP ${res.status}).`,
+      );
     }
-    const rejected = body.rejected ?? [];
-    steps.push({ step: 'Send exposure + conversion', ok: rejected.length === 0, detail: `HTTP ${res.status}, accepted ${body.accepted ?? '?'}${rejected.length ? `, rejected: ${rejected.map((r) => r.error).join('; ')}` : ''}`, ms });
+    const rejected = body?.rejected ?? [];
+    const accepted = body?.accepted;
+    steps.push({ step: 'Send exposure + conversion', ok: rejected.length === 0 && accepted === 2 ? true : rejected.length ? false : null, detail: `HTTP ${res.status}, accepted ${accepted ?? 'unknown'}${rejected.length ? `, rejected: ${rejected.map((r) => r.error).join('; ')}` : ''}`, ms });
     if (rejected.length) return done('FAILED', `Flagsmith rejected ${rejected.length} event(s): ${rejected[0]!.error}`);
+    if (accepted !== 2) return done('PENDING', `Ingestion answered HTTP ${res.status} without confirming both events were accepted. ${NO_READBACK}`);
   } catch (err) {
     steps.push({ step: 'Send exposure + conversion', ok: false, detail: err instanceof Error ? err.message : String(err) });
     return done('FAILED', `Cannot reach the events API at ${eventsEndpoint(p.urls.events)}.`);
   }
-
-  // 3. Watch the warehouse for arrival. A delay is not a failure.
-  const cli = new FlagsmithCli(io);
-  cli.addSecret(p.envKey);
-  const deadline = io.now().getTime() + p.waitSeconds * 1000;
-  let supported = true;
-  for (;;) {
-    try {
-      const w = mapWarehouses(await cli.api(`api/v1/environments/${p.envKey}/warehouse-connections/`)).find((x) => x.status === 'connected');
-      const total = w?.totalEventsReceived;
-      if (total === undefined || total === null) supported = false;
-      else if ((p.baseline !== null && total >= p.baseline + 2) || (w?.lastEventAt && w.lastEventAt >= sentAt)) {
-        steps.push({ step: 'Events reached the warehouse', ok: true, detail: `total_events_received ${p.baseline ?? '?'} → ${total}` });
-        return done('VERIFIED', `The exposure and the conversion for ${p.identity} reached the warehouse.`);
-      }
-    } catch {
-      supported = false;
-    }
-    if (!supported || io.now().getTime() >= deadline) break;
-    await io.sleep(10_000);
-  }
-  steps.push({ step: 'Events reached the warehouse', ok: null, detail: supported ? `not visible after ${p.waitSeconds}s` : 'this warehouse does not report event counts' });
-  return done(
-    'PENDING',
-    supported
-      ? 'Accepted by Flagsmith but not visible yet. Processing can take minutes: run the canary again later or watch the experiment\'s Exposures panel.'
-      : 'Accepted by Flagsmith (HTTP 2xx). This warehouse does not report event counts, so arrival cannot be confirmed here: check the experiment\'s Exposures panel.',
-  );
+  return done('ACCEPTED', `Ingestion accepted the exposure and the conversion for ${p.identity}. ${NO_READBACK} ${SCOPE_NOTE}`);
 }
