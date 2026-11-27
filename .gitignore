@@ -40,3 +40,6 @@ doctor-report*.json
 
 # packed CLI tarballs (attached to GitHub releases instead)
 *.tgz
+
+# Doctor runs save their last report next to the scanned app
+.experiment-doctor/
