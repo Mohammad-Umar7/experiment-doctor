@@ -20,6 +20,8 @@ export interface PipelineProbe {
   identity: string;
   /** True only when the evidence is about this identity, not aggregate counters. */
   identityLevel: boolean;
+  /** Where the identity's events came from: a canary over HTTP, or the app's own SDK traffic. */
+  scope?: 'ingestion-http' | 'app-sdk';
 }
 
 export interface Verification {
@@ -65,14 +67,15 @@ function pipelineStatus(before: Report, probe: PipelineProbe | null | undefined)
   }
   const fresh = probe.at >= before.generatedAt;
   if (probe.identityLevel && probe.status === 'IDENTITY_VERIFIED' && fresh) {
-    return { status: 'PIPELINE_VERIFIED', message: `Flagsmith shows the exposure and conversion of ${probe.identity}.`, probe };
+    const via = probe.scope === 'app-sdk' ? "your app's SDK traffic" : probe.scope === 'ingestion-http' ? "a canary sent over HTTP (not your app's SDK path)" : 'a probe';
+    return { status: 'PIPELINE_VERIFIED', message: `The event store holds the exposure and the conversion of ${probe.identity}, in order (identity-level, from ${via}).`, probe };
   }
   const why =
     probe.status === 'ACCEPTED'
       ? `the last canary (${probe.at}) was accepted by ingestion (HTTP 2xx), but Flagsmith offers no identity-level read to confirm it was stored`
       : probe.status === 'FAILED'
-        ? `the last canary (${probe.at}) failed`
-        : `the last canary (${probe.at}) is still pending`;
+        ? `the last probe (${probe.at}) failed`
+        : `the last probe (${probe.at}) is still pending`;
   return { status: 'PIPELINE_UNVERIFIED', message: `Not verified: ${why}${fresh ? '' : ', and it ran before the last check'}.`, probe };
 }
 

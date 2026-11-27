@@ -11,6 +11,7 @@ export { buildPipeline, buildLayers, PIPELINE, LAYERS } from './pipeline';
 export { toAgentSummary, nextStep, type AgentSummary } from './summary';
 export { compareReports, type Verification, type PatchStatus, type PipelineStatus, type ExperimentLevelStatus, type PipelineProbe } from './compare';
 export { scanFiles, type SourceFile, type ScanOptions } from './scanner/scan';
+export { evaluateIdentityEvents, parseStoredEvents, IDENTITY_EVENTS_SQL, type StoredEvent, type IdentityEventsVerdict } from './identity-events';
 export { lex, LineIndex } from './scanner/lexer';
 export { ALL_RULES, buildContext } from './rules';
 export type { Rule, RuleContext, RuleOutcome } from './rules';
