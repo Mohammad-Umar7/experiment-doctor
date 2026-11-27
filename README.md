@@ -145,6 +145,19 @@ Without Flagsmith or Supabase configured the game falls back to a local 50/50 sp
     └── route handlers ──▶ Supabase (RLS-locked, RPC only) ──▶ Rescue Center
 ```
 
+## Benchmark: Doctor vs plain Claude Code
+
+Same model (Claude Sonnet 5.5), same prompts, graded mechanically. Full method, every run, and the losses: [bench/BENCHMARK.md](bench/BENCHMARK.md).
+
+| Suite | Doctor | Plain Claude Code |
+| --- | --- | --- |
+| Six game cases (one bug each) | **6/6 fixed**, 216 s, $1.29 | 3/6 fixed, 272 s, $1.16 |
+| Self-hosted lab (3 bugs, code + config) | **3/3 found**, 85 s, $0.33 | 1/3, 329 s, $0.85 |
+| Easy case, answer in the evidence | fixed and verified, 44.6 s, $0.22 | **fixed, 21.0 s, $0.16** |
+| Healthy app | no change, correct | no change, correct, **cheaper** |
+
+The Doctor is not faster on trivial cases. It wins where Flagsmith-specific knowledge matters: `trackEvent` only buffers, `enableEvents` gates everything, `getValue` records no exposure, a variation without a key drops its exposures.
+
 ## Honest limits
 
 - The game verifies repairs **statically**: it parses the player's code and replays the SDK call order. It never runs the code. Live pipeline proof comes from the CLI and the self-hosted lab.
