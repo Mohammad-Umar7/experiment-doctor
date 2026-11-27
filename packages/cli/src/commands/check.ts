@@ -106,12 +106,18 @@ export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun
     const saved: SavedReport = { savedAt: io.now().toISOString(), invocation, report, evidence };
     try {
       saveState(root, 'last-report.json', saved, envKey ? [envKey] : []);
-      run.savedTo = toPosix(relative(io.cwd, resolve(root, STATE_DIR, 'last-report.json')));
+      run.savedTo = displayPath(io.cwd, resolve(root, STATE_DIR, 'last-report.json'));
     } catch {
       notes.push(`Could not write ${STATE_DIR}/last-report.json (verify needs it).`);
     }
   }
   return run;
+}
+
+/** Relative to cwd when inside it, absolute otherwise. */
+export function displayPath(cwd: string, path: string): string {
+  const rel = toPosix(relative(cwd, path));
+  return rel && !rel.startsWith('..') ? rel : toPosix(path);
 }
 
 export function writeReportFile(io: Io, file: string, report: Report, secrets: string[]): string {
@@ -148,12 +154,12 @@ export async function checkCommand(io: Io, argv: string[]): Promise<number> {
     const p = resolve(io.cwd, values['save-evidence']);
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, `${JSON.stringify(redactDeep(run.evidence, secrets), null, 2)}\n`);
-    run.notes.push(`Evidence written to ${toPosix(relative(io.cwd, p))}.`);
+    run.notes.push(`Evidence written to ${displayPath(io.cwd, p)}.`);
   }
   let reportPath: string | undefined;
   if (values.report) {
     reportPath = writeReportFile(io, values.report, run.report, secrets);
-    run.notes.push(`Report written to ${toPosix(relative(io.cwd, reportPath))}.`);
+    run.notes.push(`Report written to ${displayPath(io.cwd, reportPath)}.`);
   }
 
   if (values.json) {

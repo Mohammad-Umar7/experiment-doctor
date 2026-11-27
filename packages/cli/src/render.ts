@@ -44,16 +44,18 @@ function tint(s: LayerStatus, c: Palette, text: string) {
 }
 
 export function renderPipeline(report: Report, c: Palette): string {
-  const cell = 13;
   const top: string[] = [];
   const bottom: string[] = [];
   report.pipeline.forEach((n, i) => {
-    const label = n.label.padEnd(cell - 2);
-    top.push(i === report.pipeline.length - 1 ? c.bold(n.label) : `${c.bold(n.label)}${c.muted(` ${'─'.repeat(cell - 2 - n.label.length)} `)}`);
     const s = STATUS[n.status];
-    bottom.push(tint(n.status, c, `${s.glyph} ${s.word}`.padEnd(label.length + 2)));
+    const status = `${s.glyph} ${s.word}`;
+    const last = i === report.pipeline.length - 1;
+    const width = Math.max(n.label.length + 6, status.length + 2);
+    top.push(last ? c.bold(n.label) : `${c.bold(n.label)}${c.muted(` ${'─'.repeat(width - n.label.length - 2)} `)}`);
+    bottom.push(tint(n.status, c, last ? status : status.padEnd(width)));
   });
-  return `  ${top.join('')}\n  ${bottom.join('')}`;
+  return `  ${top.join('')}
+  ${bottom.join('')}`;
 }
 
 function evidenceLines(f: Finding, c: Palette): string[] {
