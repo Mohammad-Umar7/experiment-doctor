@@ -5,7 +5,7 @@ import { join, relative } from "path";
 
 // ../core/src/constants.ts
 var TOOL_NAME = "experiment-doctor";
-var TOOL_VERSION = "0.1.0";
+var TOOL_VERSION = "0.2.0";
 var DOCS = {
   runExperiment: "https://docs.flagsmith.com/experimentation/run-an-experiment",
   codingAgent: "https://docs.flagsmith.com/experimentation/set-up-with-a-coding-agent",
