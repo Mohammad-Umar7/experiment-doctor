@@ -1,4 +1,4 @@
-import { redactSecrets, type Comparison, type Finding, type LayerStatus, type Report, type Verdict } from '@experiment-doctor/core';
+import { redactSecrets, type Finding, type LayerStatus, type Report, type Verdict, type Verification } from '@experiment-doctor/core';
 import { visibleLength, type Palette } from './color';
 import { renderDiff } from './patch';
 
@@ -132,12 +132,26 @@ function nextHint(report: Report): string {
   return '';
 }
 
-export function renderComparison(cmp: Comparison, c: Palette): string {
-  const badge = cmp.status === 'VERIFIED' ? c.healthy(c.bold('✓ VERIFIED')) : cmp.status === 'FAILED' ? c.critical(c.bold('✕ FAILED')) : c.warning(c.bold('◔ PENDING'));
-  const lines = ['', `  ${badge}  ${code(cmp.message, c)}`, `  ${c.muted(`verdict: ${cmp.verdictBefore} → ${cmp.verdictAfter}`)}`];
-  if (cmp.resolved.length) lines.push(`  ${c.healthy('resolved')}   ${cmp.resolved.join(', ')}`);
-  if (cmp.remaining.length) lines.push(`  ${c.warning('remaining')}  ${cmp.remaining.join(', ')}`);
-  if (cmp.introduced.length) lines.push(`  ${c.critical('new')}        ${cmp.introduced.join(', ')}`);
+export function renderVerification(v: Verification, c: Palette): string {
+  const mark = (status: string) => {
+    if (/_VERIFIED$|_HEALTHY$/.test(status)) return c.healthy(`✓ ${status}`);
+    if (/_FAILED$|_REPAIR_REQUIRED$/.test(status)) return c.critical(`✕ ${status}`);
+    if (/_PENDING$/.test(status)) return c.warning(`◔ ${status}`);
+    if (status === 'NO_PATCH_TARGET') return c.muted(`· ${status}`);
+    return c.muted(`? ${status}`);
+  };
+  const row = (label: string, status: string, message: string) => `  ${c.secondary(label.padEnd(11))} ${mark(status)}\n${wrap(code(message, c), '              ')}`;
+  const lines = [
+    '',
+    row('Patch', v.patch.status, v.patch.message),
+    row('Pipeline', v.pipeline.status, v.pipeline.message),
+    row('Experiment', v.experiment.status, v.experiment.message),
+    '',
+    `  ${c.muted(`verdict: ${v.verdictBefore} → ${v.verdictAfter}`)}`,
+  ];
+  if (v.resolved.length) lines.push(`  ${c.healthy('resolved')}   ${v.resolved.join(', ')}`);
+  if (v.remaining.length) lines.push(`  ${c.warning('remaining')}  ${v.remaining.join(', ')}`);
+  if (v.introduced.length) lines.push(`  ${c.critical('new')}        ${v.introduced.join(', ')}`);
   lines.push('');
   return lines.join('\n');
 }
