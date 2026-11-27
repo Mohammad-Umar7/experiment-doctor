@@ -2,7 +2,7 @@
 
 Does the `flagsmith-experiment-doctor` skill and CLI make a coding agent better at fixing broken Flagsmith experiments? We measured it, and we report the runs it lost.
 
-**Short version:** on easy cases where the evidence spells out the answer, plain Claude Code is faster and cheaper. On the cases that need Flagsmith-specific knowledge, and on a realistic self-hosted setup with bugs in both code and config, the Doctor fixes what the plain agent gets wrong, in less time.
+**Short version:** on easy cases where the evidence spells out the answer, plain Claude Code is faster and cheaper. On the cases that need Flagsmith-specific knowledge, and on a realistic self-hosted setup with bugs in both code and config, the Doctor gets right what the plain agent gets wrong. On the realistic multi-bug setup it was also faster and cheaper.
 
 ## Setup
 
@@ -76,7 +76,7 @@ Run twice per arm. Run 2 ran both arms at the same time, so its wall times are s
 | ED-004 `Purchase` vs `purchase` | ✅ fixed | ✅ fixed | ❌ said the metric matches `Purchase` (read the metric's display name, not its event) | ❌ same mistake |
 | ED-006 events sent to Cloud | ✅ fixed (`api` + `eventsApiUrl`) | ✅ fixed (`api` + `eventsApiUrl`) | ✅ fixed | ⚠️ half: added `api` only, events still go to Cloud |
 | Unrequested changes | none | none | several refactors | an extra flush |
-| **Root causes fixed** | **3/3** | **3/3** | 1/3 | 0/3 (1 partial) |
+| **Outcome** | **identified 3/3**, fixed both code bugs, proposed the config fix without touching the running experiment | **same** | identified 1/3, fixed 1 | identified 0/3 fully (1 half-fixed) |
 | Time / turns / cost | 85.1 s / 25 / $0.334 | 182.5 s / 25 / $0.359 | 329.4 s / 57 / $0.852 | 251.8 s / 31 / $0.643 |
 | Tokens | 895,338 | 809,916 | 2,662,531 | 2,201,196 |
 
@@ -91,7 +91,7 @@ Run twice per arm. Run 2 ran both arms at the same time, so its wall times are s
   - a metric's name is not its event.
 
   The plain agent missed or misapplied every one of these.
-- On the realistic multi-bug case the Doctor found 3/3 in both runs; plain Claude Code fixed 1/3 and then 0/3, made the same metric-name mistake twice, and once proposed a harmful config change. The Doctor was also cheaper ($0.33 to $0.36 vs $0.64 to $0.85).
+- On the realistic multi-bug case the Doctor identified all three root causes in both runs, repaired both code defects and proposed the configuration fix without modifying the running experiment; plain Claude Code identified 1/3 and then 0/3, made the same metric-name mistake twice, and once proposed a harmful config change. The Doctor was also cheaper ($0.33 to $0.36 vs $0.64 to $0.85).
 
 Small sample: one run per arm per case in suites 1 to 3, two in suite 4. Re-run with the commands below to check.
 
