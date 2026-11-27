@@ -48,6 +48,8 @@ export interface SourceLocation {
   line: number;
   /** The source line, trimmed, with secrets redacted. */
   snippet?: string;
+  /** Exact line text, kept only when it holds no secret. Used to build patches. */
+  text?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,8 +204,8 @@ export interface InitEvidence {
   enableAnalytics?: string | null;
   /** JS init `identity` option, when present. */
   identityExpr?: string | null;
-  /** Line inside the options object where a new property can be inserted. */
-  insertAfterLine?: number;
+  /** Line after which a new option can be inserted (the line that opens the options object). */
+  insertAfter?: SourceLocation;
   /** Indentation used by the properties of the options object. */
   propIndent?: string;
   /** Receiver variable for the client (flagsmith, client, ...). */
