@@ -6,23 +6,47 @@
 
 **Your experiment is flatlining. Find out why.**
 
-A debugger for broken Flagsmith A/B tests, a CI gate that stops them from breaking,<br/>
-and a game that is itself a live Flagsmith experiment.
+An open-source debugger that diagnoses broken Flagsmith experiments, verifies repairs against real stored events,<br/>
+and catches regressions before they ship.
 
-[Live site](https://experimentdoctor.vercel.app) · [Play Human vs Doctor](https://experimentdoctor.vercel.app/play) · [Rescue Center](https://experimentdoctor.vercel.app/rescue) · [Doctor in your browser](https://experimentdoctor.vercel.app/report) · [CI Gate blocking a real PR](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1)
+[Live site](https://experimentdoctor.vercel.app) · [Doctor in your browser](https://experimentdoctor.vercel.app/report) · [CI Gate on a real PR](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [Human vs Doctor](https://experimentdoctor.vercel.app/play) · [Rescue Center](https://experimentdoctor.vercel.app/rescue) · Demo video: *link added before submission*
 
 </div>
+
+| **6/6 vs 3/6** | **3/3 in both runs** | **~54% lower cost** |
+| :---: | :---: | :---: |
+| game cases fixed: Claude Code with the Doctor vs plain Claude Code | root causes identified on a real self-hosted experiment | average agent cost on that multi-bug lab |
+
+<sub>Claude Sonnet 5.5, same prompts, graded mechanically, small samples. On easy cases plain Claude Code is faster and cheaper. Method, every run and the caveats: [bench/BENCHMARK.md](bench/BENCHMARK.md).</sub>
+
+### Proof, read back from Flagsmith's own Postgres, one identity at a time
+
+```text
+BEFORE  identity lab-broken-mwzesjta-3
+        ✓ $flag_exposure  checkout_button = control
+        ✕ Purchase        (the metric counts "purchase")
+        FAILED   conversion stored as "Purchase", the metric counts "purchase"
+
+AFTER   identity doctor-probe-mwzet3ec, after the approved patch
+        ✓ $flag_exposure  checkout_button = control
+        ✓ purchase
+        PIPELINE_VERIFIED  exposure and "purchase" stored for the same identity, in order
+```
+
+<sub>Real Flagsmith SDK events from the [self-hosted rescue lab](selfhost), not a simulation and not an aggregate counter.</sub>
 
 ---
 
 ## For judges: the evidence, per track
 
-| Track | Look at this |
+| Track | Direct proof |
 | --- | --- |
-| **T1 Test Something Real** | The live experiment and its results: [Rescue Center](https://experimentdoctor.vercel.app/rescue) (Flagsmith inference, reconciliation with our server, timeline). Design and stopping rule: [The A/B test](#the-ab-test-track-1). Play it: [/play](https://experimentdoctor.vercel.app/play). |
-| **T2 AI Agents and Feature Flags** | The CI Gate failing a real PR: [#1](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1), and passing a harmless one: [#2](https://github.com/Mohammad-Umar7/experiment-doctor/pull/2). The CLI's approval gates and fail-closed allowlist: [docs/cli.md](docs/cli.md). The Doctor finding three real bugs in a self-hosted experiment, one of them a mistake in our own seed script: [selfhost/](selfhost). |
-| **T3 Build on Open Source Flagsmith** | One-command self-hosted lab with Experimentation and per-identity verification from Flagsmith's own Postgres event store: [selfhost/](selfhost) and [Self-hosted rescue lab](#self-hosted-rescue-lab). |
-| **T4 Flagsmith Agent Skills** | The skill: [skills/flagsmith-experiment-doctor](skills/flagsmith-experiment-doctor). Benchmark against plain Claude Code, losses included: [bench/BENCHMARK.md](bench/BENCHMARK.md). |
+| **T1 Test Something Real** | [Live experiment results](https://experimentdoctor.vercel.app/rescue) · [design and stopping rule](#the-ab-test-track-1) |
+| **T2 AI Agents and Feature Flags** | [CLI: approval gates, fail-closed allowlist](docs/cli.md) · [failing PR #1](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [passing PR #2](https://github.com/Mohammad-Umar7/experiment-doctor/pull/2) |
+| **T3 Build on Open Source Flagsmith** | [Reproducible self-hosted lab with per-identity verification](selfhost) |
+| **T4 Flagsmith Agent Skills** | [The skill](skills/flagsmith-experiment-doctor) · [measured benchmark, losses included](bench/BENCHMARK.md) |
+
+> **The Doctor caught a bug in its own setup.** While seeding the self-hosted experiment we sent the variation with `key: "one_click"` inside `multivariate_options` on feature create. The stored variation came back with `key: null`, so its exposures would never be attributed. We did not plant this: Experiment Doctor reported it as ED-001 on its first run against the lab. Details: [selfhost/README.md](selfhost/README.md).
 
 ## The problem
 
