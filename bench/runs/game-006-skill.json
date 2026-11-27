@@ -1,0 +1,15 @@
+{
+  "case": "game-006",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 50241,
+  "num_turns": 16,
+  "total_cost_usd": 0.2784896,
+  "usage": {
+    "input_tokens": 20,
+    "cache_creation_input_tokens": 45682,
+    "cache_read_input_tokens": 628016,
+    "output_tokens": 3292
+  },
+  "final_answer": "The root cause is that `src/checkout.js:12` read the flag with `flagsmith.getValue(\"checkout_button\")`, which records no exposure, so users were never enrolled in the experiment and their purchases were never attributed to a variant.\n\nI changed that line to `flagsmith.getExperimentFlag(\"checkout_button\")?.value`. This is the SDK call that records the exposure.\n\nI ran the local `experiment-doctor` against `evidence.json`, with no Flagsmith calls. Before the fix it reported `REPAIR_REQUIRED` (ED-011). After the fix it reports no defects and `PENDING`.\n\nThe experiment is still short of data (about 170 identities per variant and 0 conversions). Exposures should now be recorded for new sessions, so conversions should start to show up, but only a fresh pull of results will confirm that. I haven't committed the change.\n\nI couldn't load the `flagsmith-experiment-doctor` skill through the Skill tool, so I ran the CLI bundled in `node_modules` directly."
+}

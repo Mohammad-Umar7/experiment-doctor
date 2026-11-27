@@ -1,0 +1,15 @@
+{
+  "case": "game-005",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 46547,
+  "num_turns": 16,
+  "total_cost_usd": 0.2621612,
+  "usage": {
+    "input_tokens": 22,
+    "cache_creation_input_tokens": 41560,
+    "cache_read_input_tokens": 647572,
+    "output_tokens": 3112
+  },
+  "final_answer": "**Root cause:** `flagsmith.init()` in `src/checkout.js:4` was missing `enableEvents: true`, so the SDK's event pipeline never started. `getExperimentFlag` fell back to a plain flag read with no exposure, and `trackEvent(\"purchase\")` did nothing.\n\nI added `enableEvents: true` to the init options, and the doctor's static check for this issue (ED-009) now passes.\n\nI couldn't confirm that events now reach Flagsmith. I didn't run a delivery probe, and the Flagsmith CLI isn't installed, so the live config was not re-checked and the experiment shows as unverifiable. The experiment's zero conversions in `evidence.json` will only change once traffic flows with the fix deployed.\n\nThe `flagsmith-experiment-doctor` skill failed to load through the Skill tool. I ran its bundled script from `.claude/skills` instead. The change is uncommitted in the working tree."
+}

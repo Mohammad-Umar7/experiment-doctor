@@ -1,0 +1,15 @@
+{
+  "case": "game-006",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 34205,
+  "num_turns": 7,
+  "total_cost_usd": 0.1801384,
+  "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 31545,
+    "cache_read_input_tokens": 260884,
+    "output_tokens": 2785
+  },
+  "final_answer": "I haven't found the root cause, and I haven't changed any code.\n\nThe evidence shows the problem is on the conversion side, not the exposure side. Both arms have identities (171 control, 166 green) and the sample-ratio check is healthy (`srmPValue` 0.7). The warehouse is connected and has received 4,210 events. But `purchase` conversions are 0 in both arms, and `chanceToWin` is null. The experiment is running at 100% rollout, and the metric is `purchase` with `occurrence` aggregation.\n\nIn `src/checkout.js`, the event name matches the metric (`trackEvent(\"purchase\")`). The `purchase` listener in `src/shop.js` is wired correctly. The identify → getValue → trackEvent order is fine, and the only flush is the `pagehide` handler.\n\nThe suspects are all in how the code uses the SDK:\n- `trackEvent`, `flushEvents` and `enableEvents` may not be real `@flagsmith/flagsmith` 12.x APIs. If so, nothing is ever sent for conversions.\n- Events may only be flushed on `pagehide`, and a plain fetch there can be cancelled before it completes.\n- Events may be recorded without being tied to the identified user.\n\nI can't tell which of these it is. I couldn't check the SDK source, because `npm` is blocked in this session and `node_modules` isn't installed. Picking one now would be a guess, and changing event-tracking code on a guess could make the data worse.\n\nIf you approve `npm pack @flagsmith/flagsmith@12.6.0` (or paste the SDK's event-tracking docs), I'll confirm the real API, make the fix and report the cause in one sentence."
+}

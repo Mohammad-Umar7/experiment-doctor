@@ -1,0 +1,15 @@
+{
+  "case": "game-001",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 15311,
+  "num_turns": 7,
+  "total_cost_usd": 0.1537693,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 30805,
+    "cache_read_input_tokens": 201333,
+    "output_tokens": 1040
+  },
+  "final_answer": "The root cause is an event-name mismatch. `src/checkout.js` sent `trackEvent(\"Purchase\")`, but the experiment's metric listens for `purchase` in lowercase, so no conversions were ever counted (0 for both variants, even though users were being exposed).\n\nI changed the call in `src/checkout.js` to `trackEvent(\"purchase\")`. I haven't run the app or the experiment, so the fix is unverified. Conversions in the Flagsmith results should start appearing once the change is deployed."
+}

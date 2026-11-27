@@ -1,0 +1,15 @@
+{
+  "case": "game-003",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 22039,
+  "num_turns": 4,
+  "total_cost_usd": 0.1536109,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 30333,
+    "cache_read_input_tokens": 200029,
+    "output_tokens": 1226
+  },
+  "final_answer": "**Root cause:** `src/checkout.js` called `flagsmith.trackEvent(\"purchase\")` without awaiting it and then immediately ran `window.location.assign(\"/thank-you\")`. The page unload cancels the in-flight request, so the `purchase` conversion is never recorded. That matches the evidence: both variants have identities (171 control, 166 green) but 0 conversions.\n\nI fixed it by awaiting `trackEvent` before the redirect (`src/checkout.js`).\n\nI haven't run it. `@flagsmith/flagsmith` isn't installed here, so I couldn't confirm that `trackEvent` returns a promise that resolves once the event is sent. If it only queues the event, the await won't help, and the redirect needs to wait for a flush instead. Also check that `getExperimentFlag` is a real SDK method, since I couldn't verify that either."
+}

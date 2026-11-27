@@ -1,0 +1,15 @@
+{
+  "case": "game-005",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 154514,
+  "num_turns": 10,
+  "total_cost_usd": 0.35830619999999996,
+  "usage": {
+    "input_tokens": 20,
+    "cache_creation_input_tokens": 62313,
+    "cache_read_input_tokens": 651842,
+    "output_tokens": 4383
+  },
+  "final_answer": "**Root cause (likely, not confirmed):** `purchase` events were only queued by `trackEvent(\"purchase\")` and not flushed until a `pagehide` handler, so the page navigation after checkout cancelled the send. That is why both variants show exposures (171 and 166 identities) and 0 conversions.\n\nI could not read the Flagsmith SDK source, because `npm` access needed an approval that this session can't give. So I haven't confirmed how `flushEvents` and `pagehide` behave in the SDK. The `evidence.json` setup looks healthy: the experiment is running at 100% rollout, the metric event is `purchase`, and the warehouse is receiving events. That points to the code rather than the Flagsmith config.\n\n**Fix applied** in `src/checkout.js`: the purchase handler now calls `await flagsmith.flushEvents()` right after `trackEvent(\"purchase\")`. I left the `pagehide` flush in place. I haven't run anything, and the app code doesn't dispatch the `purchase` event itself, so I couldn't test end to end.\n\nIf conversions still read 0 after this ships, check the `flushEvents` and `trackEvent` signatures against the installed SDK version."
+}

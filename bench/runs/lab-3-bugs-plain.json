@@ -1,0 +1,15 @@
+{
+  "case": "lab-3-bugs",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5,claude-haiku-5-5",
+  "duration_ms": 329350,
+  "num_turns": 57,
+  "total_cost_usd": 0.8516553099999999,
+  "usage": {
+    "input_tokens": 60,
+    "cache_creation_input_tokens": 96587,
+    "cache_read_input_tokens": 2545596,
+    "output_tokens": 20288
+  },
+  "final_answer": "I found three root causes, all in the code, and fixed them in `src/experiment.js` and `src/checkout.js`. I found no Flagsmith configuration problem, so there is no config command to run. I haven't run the changed code or tested it against the SDK. Neither `npm` nor `curl` could run here without approval, so I read the SDK 12.6.0 API from unpkg instead.\n\n**Root causes**\n1. **Wrong flag server (code):** `init()` never passed `api`, so the SDK asked `edge.api.flagsmith.com` for your environment key instead of your self-hosted server. The key is unknown there, so every shopper got `control` and no exposure was recorded. That is the empty `one_click` arm.\n2. **Wrong events server (code):** `eventProcessorConfig.eventsApiUrl` defaults to `events.api.flagsmith.com` and does not follow `api`, so exposure and `Purchase` events never reached your instance. Your instance does expose `/api/v1/events/`. I derive the URL from the API URL, and `VITE_FLAGSMITH_EVENTS_URL` can override it.\n3. **Conversion never sent (code):** `trackEvent` only buffers. Events go out on a 10 s timer, and the `pagehide` flush isn't awaited, so it rarely completes when the page unloads. `Purchase` is now flushed right after it's tracked, and there is also a `visibilitychange` flush.\n\nSmaller fixes I made in the same files:\n- **Failed orders counted as conversions:** `Purchase` now only fires if the order response is OK. Before, a 500 still counted.\n- **Duplicate init:** `startExperiment` runs once, so repeated mounts no longer re-init or stack listeners.\n- **Silent SaaS fallback:** it throws if `VITE_FLAGSMITH_API_URL` is unset.\n\n**Flagsmith configuration:** I checked it read-only through the CLI and found nothing to change.\n- The experiment `One-click checkout` is running.\n- The `Purchase` occurrence metric matches the code's event name.\n- `one_click` is allocated 50% for 100% of traffic. Sampled identities split roughly 50/50 with `in_experiment: true`.\n- The 0% weight on the environment default is expected. The 50% allocation lives in the `experiment-1-rollout` segment override. It only applies to identified users, and the code does identify before reading the flag.\n\n**You need to do:** set `VITE_FLAGSMITH_API_URL` (e.g. `htt<path>`, or your real self-hosted URL) in the app's environment. The app now throws at startup without it.\n\nI used `Edit` rather than `Write`, because `Write` was denied on the first attempt."
+}

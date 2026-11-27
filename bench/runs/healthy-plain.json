@@ -1,0 +1,15 @@
+{
+  "case": "healthy",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 17629,
+  "num_turns": 7,
+  "total_cost_usd": 0.15431709999999998,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 31968,
+    "cache_read_input_tokens": 142231,
+    "output_tokens": 1221
+  },
+  "final_answer": "I found nothing broken, so I made no code change. The code follows the Flagsmith experiment setup: `init` has `enableEvents: true`, `identify` is awaited before `getExperimentFlag`, `trackEvent('purchase')` matches the metric's event name, and `flushEvents` runs on `pagehide`. `evidence.json` also shows data arriving. The warehouse is connected with 4,210 events received, results cover 312 control and 298 green identities with a healthy sample-ratio check (SRM p=0.41), and green shows a 0.97 chance to win. The experiment is only about three days old and results aren't final, so it needs more time to run before the data is conclusive."
+}

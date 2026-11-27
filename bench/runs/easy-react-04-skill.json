@@ -1,0 +1,15 @@
+{
+  "case": "easy-react-04",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 44571,
+  "num_turns": 10,
+  "total_cost_usd": 0.2212717,
+  "usage": {
+    "input_tokens": 16,
+    "cache_creation_input_tokens": 38820,
+    "cache_read_input_tokens": 451797,
+    "output_tokens": 2078
+  },
+  "final_answer": "**Root cause:** `src/App.tsx:10` called `flagsmith.trackEvent('Purchase')`, but the Flagsmith \"Purchases\" metric counts the event `purchase`. Event names are case-sensitive, so every conversion was silently ignored.\n\nI changed it to `trackEvent('purchase')`. The doctor's re-check no longer reports any defect.\n\n- **Patch:** The code check now passes. `src/App.tsx` is the only modified file, and I haven't committed it.\n- **Delivery:** Not proven. The check only covers the code and the saved config, not real events reaching storage.\n- **Experiment:** Still waiting for data, so counts may stay at zero for a bit. Fixed events only count from the next deploy, and past purchases aren't backfilled.\n\nThe `/flagsmith-experiment-doctor` skill wouldn't load, so I ran its `experiment-doctor` CLI directly against `evidence.json`. I applied the doctor's one-line patch with a direct edit, not through `fix --yes`."
+}

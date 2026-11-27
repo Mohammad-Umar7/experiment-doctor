@@ -1,0 +1,15 @@
+{
+  "case": "game-002",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 25298,
+  "num_turns": 6,
+  "total_cost_usd": 0.1735636,
+  "usage": {
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 31530,
+    "cache_read_input_tokens": 316896,
+    "output_tokens": 1573
+  },
+  "final_answer": "The root cause is that `src/checkout.js` evaluated `getExperimentFlag(\"checkout_button\")` before `flagsmith.identify(user.id)`, so the exposure was recorded against an anonymous identity while the `purchase` events were recorded against the identified user, and no conversion could ever be matched to a variant (hence 0 conversions in both arms).\n\nI fixed it by moving `identify()` ahead of the flag evaluation in `src/checkout.js`. I haven't run it or checked the result data. The `flagsmith-experiment-doctor` skill failed to load, so I diagnosed this by hand from `evidence.json` and the code.\n\nResults should only start to make sense for users who load the page after the fix ships. Exposures already logged against anonymous identities can't be re-attributed."
+}

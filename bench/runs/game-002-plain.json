@@ -1,0 +1,15 @@
+{
+  "case": "game-002",
+  "arm": "plain",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 22508,
+  "num_turns": 4,
+  "total_cost_usd": 0.15342519999999998,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 30309,
+    "cache_read_input_tokens": 199932,
+    "output_tokens": 1218
+  },
+  "final_answer": "The root cause is that `src/checkout.js` evaluated `checkout_button` before calling `flagsmith.identify(user.id)`, so the exposure was logged under an anonymous identity and the later `purchase` events under the identified user. That is why `evidence.json` shows 337 identities and 0 conversions in both arms.\n\nI fixed it by moving `getCurrentUser()` and `identify()` ahead of the flag evaluation and render. I haven't run it, and I haven't checked `getExperimentFlag` against the SDK, since `@flagsmith/flagsmith` isn't installed here. The button now renders after the user lookup, so it appears slightly later.\n\nOnly the `green` variant is defined in the flag config, with control implicit. That wasn't the cause, but it's worth a look on the Flagsmith side."
+}

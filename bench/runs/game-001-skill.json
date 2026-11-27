@@ -1,0 +1,15 @@
+{
+  "case": "game-001",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 37489,
+  "num_turns": 10,
+  "total_cost_usd": 0.19874179999999997,
+  "usage": {
+    "input_tokens": 16,
+    "cache_creation_input_tokens": 33887,
+    "cache_read_input_tokens": 442718,
+    "output_tokens": 1889
+  },
+  "final_answer": "The root cause is that `src/checkout.js` sent the conversion event as `\"Purchase\"`, while the Flagsmith metric listens for `\"purchase\"`, so no conversion ever matched and both variants show 0 conversions (171 and 166 identities).\n\nI changed it to `flagsmith.trackEvent(\"purchase\")` in `src/checkout.js`. I didn't run the app or the experiment. The existing 337 enrolled identities will stay at 0 conversions, and only purchases made after you deploy will count.\n\nThe `flagsmith-experiment-doctor` skill failed to load, so I worked from `evidence.json` and the code directly.\n\nThe evidence also shows the flag has only a `green` variant defined, with no `control` entry, which may be worth checking in Flagsmith. It didn't cause the zero conversions."
+}
