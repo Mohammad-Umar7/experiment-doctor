@@ -3,8 +3,8 @@ import { CHALLENGE_LIMIT_MS, HINT_VARIANTS, type HintVariant } from "@/lib/site"
 import type { GameStats, LeaderboardEntry, VariantStats } from "@/lib/game/types";
 
 /**
- * Game storage. Uses Supabase (PostgREST) when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
- * are set; otherwise an in-process memory store that is fine for local development.
+ * Game storage. Uses Supabase when SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are set;
+ * otherwise an in-process memory store that is fine for local development.
  * Schema: supabase/schema.sql.
  */
 
@@ -80,74 +80,80 @@ const memoryStore: Store = {
 
 /* ----------------------------- supabase ----------------------------- */
 
-function supabaseStore(url: string, key: string): Store {
-  const base = `${url.replace(/\/$/, "")}/rest/v1`;
-  const headers = {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-  };
+type LeaderboardRow = {
+  sid: string;
+  handle: string;
+  case_id: string;
+  elapsed_ms: number;
+  variant: HintVariant;
+  used_hint: boolean;
+  created_at: string;
+};
 
-  async function req(path: string, init?: RequestInit) {
-    const res = await fetch(`${base}${path}`, { ...init, headers: { ...headers, ...(init?.headers ?? {}) }, cache: "no-store" });
-    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+/**
+ * Talks to Supabase only through the security-definer functions in supabase/schema.sql.
+ * Tables have no grants, so the publishable key is enough and no secret key is needed.
+ */
+function supabaseStore(url: string, key: string): Store {
+  const base = `${url.replace(/\/$/, "")}/rest/v1/rpc`;
+  const headers: Record<string, string> = { apikey: key, "Content-Type": "application/json" };
+  // Legacy JWT keys also go in Authorization; new sb_ keys must not.
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+
+  async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+    const res = await fetch(`${base}/${fn}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(args),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase ${fn} ${res.status}: ${await res.text()}`);
     const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    return (text ? JSON.parse(text) : null) as T;
   }
 
   return {
     kind: "supabase",
     async startSession(row) {
-      await req("/doctor_sessions", { method: "POST", body: JSON.stringify(row), headers: { Prefer: "return=minimal" } });
-    },
-    async recordHint(sid) {
-      await req(`/doctor_sessions?sid=eq.${encodeURIComponent(sid)}&hint_at=is.null`, {
-        method: "PATCH",
-        body: JSON.stringify({ hint_at: new Date().toISOString() }),
-        headers: { Prefer: "return=minimal" },
+      await rpc("doctor_start_session", {
+        p_sid: row.sid,
+        p_pid: row.pid,
+        p_case_id: row.case_id,
+        p_variant: row.variant,
+        p_source: row.source,
+        p_counted: row.counted,
+        p_started_at: row.started_at,
       });
     },
+    async recordHint(sid) {
+      await rpc("doctor_record_hint", { p_sid: sid });
+    },
     async recordAttempt(sid, result) {
-      const rows = (await req("/rpc/doctor_record_attempt", {
-        method: "POST",
-        body: JSON.stringify({
-          p_sid: sid,
-          p_ok: result.ok,
-          p_elapsed_ms: result.elapsedMs,
-          p_failing_check: result.failingCheck,
-        }),
-      })) as boolean | null;
-      return rows === true;
+      const first = await rpc<boolean>("doctor_record_attempt", {
+        p_sid: sid,
+        p_ok: result.ok,
+        p_elapsed_ms: result.elapsedMs,
+        p_failing_check: result.failingCheck,
+      });
+      return first === true;
     },
     async getSession(sid) {
-      const rows = (await req(`/doctor_sessions?sid=eq.${encodeURIComponent(sid)}&limit=1`)) as SessionRow[];
-      return rows[0] ?? null;
+      const rows = await rpc<SessionRow[]>("doctor_get_session", { p_sid: sid });
+      return rows?.[0] ?? null;
     },
     async claim(entry) {
-      await req("/doctor_leaderboard", {
-        method: "POST",
-        body: JSON.stringify({
-          sid: entry.sid,
-          handle: entry.handle,
-          case_id: entry.caseId,
-          elapsed_ms: entry.elapsedMs,
-          variant: entry.variant,
-          used_hint: entry.usedHint,
-        }),
-        headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+      await rpc<boolean>("doctor_claim", {
+        p_sid: entry.sid,
+        p_handle: entry.handle,
+        p_case_id: entry.caseId,
+        p_elapsed_ms: entry.elapsedMs,
+        p_variant: entry.variant,
+        p_used_hint: entry.usedHint,
       });
     },
     async leaderboard(limit) {
-      const rows = (await req(`/doctor_leaderboard?select=*&order=elapsed_ms.asc&limit=${limit}`)) as Array<{
-        sid: string;
-        handle: string;
-        case_id: string;
-        elapsed_ms: number;
-        variant: HintVariant;
-        used_hint: boolean;
-        created_at: string;
-      }>;
-      return rows.map((r) => ({
+      const rows = await rpc<LeaderboardRow[]>("doctor_leaderboard_top", { p_limit: limit });
+      return (rows ?? []).map((r) => ({
         sid: r.sid,
         handle: r.handle,
         caseId: r.case_id,
@@ -158,7 +164,7 @@ function supabaseStore(url: string, key: string): Store {
       }));
     },
     async sessions() {
-      return (await req("/doctor_sessions?select=*&order=started_at.asc&limit=10000")) as SessionRow[];
+      return (await rpc<SessionRow[]>("doctor_all_sessions")) ?? [];
     },
   };
 }
@@ -168,7 +174,7 @@ let cached: Store | null = null;
 export function getStore(): Store {
   if (cached) return cached;
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   cached = url && key ? supabaseStore(url, key) : memoryStore;
   return cached;
 }
