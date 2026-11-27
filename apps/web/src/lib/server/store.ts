@@ -200,7 +200,22 @@ export function computeStats(rows: SessionRow[]): GameStats {
   const byCase: GameStats["byCase"] = {};
   const failingChecks: Record<string, number> = {};
 
+  // The experiment unit is a player: only each player's first counted run feeds the A/B
+  // numbers, so replays cannot tilt a variant. Every counted run still feeds byCase.
+  const firstRun = new Map<string, SessionRow>();
   for (const r of counted) {
+    const prev = firstRun.get(r.pid);
+    if (!prev || r.started_at < prev.started_at) firstRun.set(r.pid, r);
+  }
+
+  for (const r of counted) {
+    byCase[r.case_id] ??= { started: 0, repaired: 0 };
+    byCase[r.case_id].started += 1;
+    if (r.elapsed_ms !== null && r.elapsed_ms <= CHALLENGE_LIMIT_MS) byCase[r.case_id].repaired += 1;
+    if (r.last_failing_check) failingChecks[r.last_failing_check] = (failingChecks[r.last_failing_check] ?? 0) + 1;
+  }
+
+  for (const r of firstRun.values()) {
     const v = byVariant[r.variant];
     if (!v) continue;
     v.enrolled += 1;
@@ -210,15 +225,11 @@ export function computeStats(rows: SessionRow[]): GameStats {
       v.repaired += 1;
       times[r.variant].push(r.elapsed_ms as number);
     }
-    byCase[r.case_id] ??= { started: 0, repaired: 0 };
-    byCase[r.case_id].started += 1;
-    if (repairedInTime) byCase[r.case_id].repaired += 1;
-    if (r.last_failing_check) failingChecks[r.last_failing_check] = (failingChecks[r.last_failing_check] ?? 0) + 1;
   }
   for (const key of Object.keys(byVariant) as HintVariant[]) byVariant[key].medianMs = median(times[key]);
 
   return {
-    players: new Set(counted.map((r) => r.pid)).size,
+    players: firstRun.size,
     sessions: counted.length,
     verifiedRepairs: Object.values(byVariant).reduce((n, v) => n + v.repaired, 0),
     byVariant,
