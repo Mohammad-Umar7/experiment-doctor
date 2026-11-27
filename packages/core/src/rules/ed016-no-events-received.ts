@@ -11,6 +11,7 @@ export const ed016: Rule = {
   layer: 'ingestion',
   node: 'warehouse',
   rank: 130,
+  optional: true,
   run(ctx) {
     const exp = ctx.experiment;
     const w = ctx.config?.warehouses?.find((x) => x.status === 'connected');

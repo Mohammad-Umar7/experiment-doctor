@@ -38,5 +38,7 @@ export interface Rule {
   node: PipelineNodeId;
   /** Lower runs first in the report when severities tie. */
   rank: number;
+  /** A skipped optional check does not make its pipeline node "unknown". */
+  optional?: boolean;
   run(ctx: RuleContext): RuleOutcome;
 }

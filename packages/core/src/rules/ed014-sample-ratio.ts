@@ -9,6 +9,7 @@ export const ed014: Rule = {
   layer: 'results',
   node: 'results',
   rank: 140,
+  optional: true,
   run(ctx) {
     const results = ctx.config?.results;
     if (!results) return skip('No computed results.');

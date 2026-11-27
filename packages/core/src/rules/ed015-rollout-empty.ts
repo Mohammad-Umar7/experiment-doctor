@@ -9,6 +9,7 @@ export const ed015: Rule = {
   layer: 'config',
   node: 'flagsmith',
   rank: 40,
+  optional: true,
   run(ctx) {
     const exp = ctx.experiment;
     if (!exp || exp.status !== 'running') return skip('The experiment is not running.');
