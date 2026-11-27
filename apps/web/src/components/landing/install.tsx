@@ -17,7 +17,7 @@ const WAYS = [
   {
     title: "CI Gate",
     body: "Fail the check on pull requests that would silently stop an experiment from counting.",
-    command: "uses: Mohammad-Umar7/experiment-doctor@main",
+    command: "uses: Mohammad-Umar7/experiment-doctor@v0.1.0",
   },
 ];
 
