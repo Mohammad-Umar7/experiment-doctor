@@ -516,6 +516,7 @@ var ed002 = {
     }
     if (!calls.length) return skip("No getExperimentFlag or useExperiment call was found.");
     const findings = [];
+    let unknownIdentity = null;
     for (const c of calls.filter((x) => x.sdk === "node" && !x.identifierExpr)) {
       findings.push(
         makeFinding(this, {
@@ -531,7 +532,10 @@ var ed002 = {
     const jsCalls = calls.filter((c) => c.sdk === "js");
     if (jsCalls.length) {
       const ids = code.identifies.filter((i) => i.sdk === "js" && (i.via === "identify" || i.via === "init-identity"));
-      if (ids.length === 0) {
+      const opaque = code.inits.find((i) => i.sdk === "js" && i.opaque);
+      if (ids.length === 0 && opaque) {
+        unknownIdentity = `The SDK options at ${where(opaque.loc)} are built elsewhere, so an identity may be set there: unknown, not missing.`;
+      } else if (ids.length === 0) {
         findings.push(neverIdentifies(this, jsCalls[0], code.inits.find((i) => i.style === "provider" && i.insertAfter)));
       } else {
         const ordering = orderingProblem(this, jsCalls, ids);
@@ -539,6 +543,7 @@ var ed002 = {
       }
     }
     if (findings.length) return fail(findings);
+    if (unknownIdentity) return skip(unknownIdentity);
     return pass(`${calls.length === 1 ? "The experiment flag is" : "Experiment flags are"} read after the user is identified (static check).`);
   }
 };
@@ -952,6 +957,10 @@ function check(rule, ctx, init, notes) {
   const eventsLit = stringLiteral(init.eventsApiUrl);
   const apiOpt = init.sdk === "node" ? "apiUrl" : "api";
   const indent = init.propIndent ?? "  ";
+  if (init.opaque && (init.apiUrl === null || init.eventsApiUrl === null)) {
+    notes.push(`The SDK options at ${init.loc.file}:${init.loc.line} are built elsewhere (a spread or a helper), so ${apiOpt} and eventsApiUrl cannot be checked statically.`);
+    return null;
+  }
   if (apiLit && !isCloudUrl(apiLit)) {
     const expected = usesFlagsmithDb === false ? null : selfHostedEventsUrl(apiLit);
     const target = expected ?? INGESTION_PLACEHOLDER;
@@ -1192,8 +1201,10 @@ var ed009 = {
       const usesEvents = code.experimentFlags.length + code.trackEvents.length > 0;
       return skip(usesEvents ? "The SDK is used, but its initialisation was not found in the scanned code." : "No SDK initialisation was found.");
     }
-    const off = code.inits.filter((i) => i.enableEvents === null || i.enableEvents === "false");
-    const dynamic = code.inits.filter((i) => i.enableEvents !== null && i.enableEvents !== "true" && i.enableEvents !== "false");
+    const unknown = code.inits.filter((i) => i.opaque && i.enableEvents === null);
+    const visible = code.inits.filter((i) => !unknown.includes(i));
+    const off = visible.filter((i) => i.enableEvents === null || i.enableEvents === "false");
+    const dynamic = visible.filter((i) => i.enableEvents !== null && i.enableEvents !== "true" && i.enableEvents !== "false");
     if (off.length) {
       const init = off[0];
       return fail([
@@ -1207,19 +1218,10 @@ var ed009 = {
         })
       ]);
     }
-    if (dynamic.length) {
-      const init = dynamic[0];
-      return fail([
-        makeFinding(this, {
-          severity: "warning",
-          title: "enableEvents depends on runtime configuration",
-          detail: `enableEvents is set to \`${init.enableEvents}\`. If that resolves to false in this environment, the SDK sends no exposures or conversions.`,
-          evidence: [codeItem(`enableEvents: ${init.enableEvents}`, init.enableEventsLoc ?? init.loc)],
-          fix: { summary: "Make sure enableEvents resolves to true wherever the experiment runs, or set it to true.", docs: DOCS.runExperiment },
-          confidence: 0.5
-        })
-      ]);
-    }
+    const notes = [];
+    if (unknown.length) notes.push(`The SDK options at ${unknown.map((i) => where(i.loc)).join(", ")} are built elsewhere (a spread or a helper), so enableEvents cannot be read: unknown, not missing.`);
+    if (dynamic.length) notes.push(`enableEvents is computed at runtime (\`${dynamic[0].enableEvents}\` at ${where(dynamic[0].enableEventsLoc ?? dynamic[0].loc)}); make sure it is true where the experiment runs.`);
+    if (notes.length) return skip(notes.join(" "));
     return pass(`enableEvents: true is set (${code.inits.map((i) => where(i.loc)).join(", ")}).`);
   }
 };
@@ -1690,10 +1692,68 @@ var ed016 = {
   }
 };
 
+// ../core/src/scope.ts
+function appOf(file, roots) {
+  let best = "";
+  for (const r of roots) {
+    if (r && (file === r || file.startsWith(`${r}/`)) && r.length > best.length) best = r;
+  }
+  return best;
+}
+function scopeToApp(code, flagKey) {
+  const roots = code.appRoots ?? [];
+  if (roots.length <= 1) return { code, app: null, otherApps: [] };
+  const of = (l) => appOf(l.loc.file, roots);
+  const items = [...code.inits, ...code.identifies, ...code.experimentFlags, ...code.plainFlagReads, ...code.trackEvents, ...code.exposures, ...code.flushes];
+  const weight = /* @__PURE__ */ new Map();
+  for (const i of items) weight.set(of(i), (weight.get(of(i)) ?? 0) + 1);
+  const active = [...weight.keys()].sort();
+  if (active.length === 0) return { code, app: null, otherApps: [] };
+  const pick = (apps) => [...apps].sort((a, b) => (weight.get(b) ?? 0) - (weight.get(a) ?? 0) || a.localeCompare(b))[0];
+  const withFlag = flagKey ? active.filter((a) => code.experimentFlags.some((c) => c.flag === flagKey && of(c) === a) || code.exposures.some((e) => e.flag === flagKey && of(e) === a)) : [];
+  const readingFlag = flagKey ? active.filter((a) => code.plainFlagReads.some((r) => r.flag === flagKey && of(r) === a)) : [];
+  const withExperiment = active.filter((a) => code.experimentFlags.some((c) => of(c) === a));
+  let app;
+  let reason;
+  if (withFlag.length) {
+    app = pick(withFlag);
+    reason = `it reads the experiment flag "${flagKey}"`;
+  } else if (readingFlag.length) {
+    app = pick(readingFlag);
+    reason = `it reads the flag "${flagKey}"`;
+  } else if (withExperiment.length) {
+    app = pick(withExperiment);
+    reason = "it reads an experiment flag";
+  } else {
+    app = pick(active);
+    reason = "it has the most Flagsmith code";
+  }
+  const inApp = (l) => of(l) === app;
+  const manifestCounts = (file) => {
+    const dir = file.replace(/(^|\/)package\.json$/, "");
+    return dir === app || dir === "" || app.startsWith(`${dir}/`);
+  };
+  const scoped = {
+    ...code,
+    files: code.files.filter((f) => appOf(f.file, roots) === app),
+    packages: code.packages.filter((p) => manifestCounts(p.manifest.file)),
+    inits: code.inits.filter(inApp),
+    identifies: code.identifies.filter(inApp),
+    experimentFlags: code.experimentFlags.filter(inApp),
+    plainFlagReads: code.plainFlagReads.filter(inApp),
+    trackEvents: code.trackEvents.filter(inApp),
+    exposures: code.exposures.filter(inApp),
+    flushes: code.flushes.filter(inApp),
+    exits: code.exits.filter(inApp)
+  };
+  if (code.experimentUpdates) scoped.experimentUpdates = code.experimentUpdates.filter(inApp);
+  return { code: scoped, app, otherApps: active.filter((a) => a !== app), reason };
+}
+
 // ../core/src/rules/context.ts
 function buildContext(evidence) {
   const config = evidence.config ?? null;
-  const code = evidence.code ?? null;
+  const rawCode = evidence.code ?? null;
   const experiment = config ? config.experiment : void 0;
   const flagKey = config?.flag?.name ?? experiment?.featureName ?? evidence.target?.flag ?? null;
   let metrics = config?.metrics;
@@ -1704,8 +1764,12 @@ function buildContext(evidence) {
       if (attached.length) metrics = attached;
     }
   }
+  const scope = rawCode ? scopeToApp(rawCode, flagKey) : null;
+  const code = scope ? scope.code : null;
   const now = evidence.collectedAt ? new Date(evidence.collectedAt) : null;
-  return { evidence, config, code, flagKey, experiment, metrics, now: now && !Number.isNaN(now.getTime()) ? now : null };
+  const ctx = { evidence, config, code, flagKey, experiment, metrics, now: now && !Number.isNaN(now.getTime()) ? now : null };
+  if (scope?.app !== null && scope?.app !== void 0) ctx.app = { path: scope.app, otherApps: scope.otherApps, reason: scope.reason ?? "" };
+  return ctx;
 }
 
 // ../core/src/rules/index.ts
@@ -1748,6 +1812,10 @@ function diagnose(evidence, options = {}) {
   if (expId !== void 0) target.experimentId = expId;
   if (exp?.name) target.experimentName = exp.name;
   if (evidence.config?.environment?.name) target.environment = evidence.config.environment.name;
+  if (ctx.app) {
+    target.app = ctx.app.path || ".";
+    if (ctx.app.otherApps.length) target.otherApps = ctx.app.otherApps.map((a) => a || ".");
+  }
   return {
     schemaVersion: 1,
     tool: { name: TOOL_NAME, version: TOOL_VERSION },
@@ -2061,11 +2129,17 @@ function parseObject(code, skel, open) {
   const close = findClose(skel, open);
   if (close < 0) return null;
   const props = [];
+  const spreads = [];
+  let index = -1;
   for (const part of splitTopLevel(skel, open + 1, close)) {
+    index++;
     const text = code.slice(part.start, part.end);
     const lead = text.length - text.trimStart().length;
     const body = text.trim();
-    if (body.startsWith("...")) continue;
+    if (body.startsWith("...")) {
+      spreads.push(index);
+      continue;
+    }
     const m = /^(?:(['"])([^'"]+)\1|([A-Za-z_$][\w$]*))\s*(:)?/.exec(body);
     if (!m) continue;
     const key = m[2] ?? m[3];
@@ -2079,13 +2153,14 @@ function parseObject(code, skel, open) {
         keyOffset: part.start + lead,
         valueOffset: part.start + lead + after + valueLead,
         valueEnd: part.end,
-        shorthand: false
+        shorthand: false,
+        index
       });
     } else if (/^[A-Za-z_$][\w$]*$/.test(body)) {
-      props.push({ key, value: key, keyOffset: part.start + lead, valueOffset: part.start + lead, valueEnd: part.end, shorthand: true });
+      props.push({ key, value: key, keyOffset: part.start + lead, valueOffset: part.start + lead, valueEnd: part.end, shorthand: true, index });
     }
   }
-  return { props, close };
+  return { props, spreads, close };
 }
 function skipSpace(text, from) {
   let i = from;
@@ -2123,6 +2198,19 @@ var CODE_EXT = /\.(?:[mc]?[jt]sx?)$/i;
 var IGNORED = /(^|\/)(node_modules|dist|build|out|coverage|\.next|\.git|\.turbo|\.vercel|\.experiment-doctor)\//;
 var MCP_FILES = /(^|\/)(\.mcp\.json|mcp\.json|claude_desktop_config\.json|\.cursor\/mcp\.json|\.vscode\/mcp\.json)$/;
 var MAX_FILE_BYTES = 75e4;
+var TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|tests?|e2e|fixtures?|cypress|playwright)\/|\.(test|spec|e2e)\.[mc]?[jt]sx?$/i;
+var BUNDLE_DIR = /(^|\/)(public|vendor|vendors|dist|build|out|static\/js)\//i;
+var BUNDLE_NAME = /\.(min|bundle|umd|prod)\.[mc]?js$/i;
+var SDK_SOURCE = /eventProcessorConfig requires enableEvents|ValueError: enableEvents must be true|this\.getExperimentFlag\s*=\s*function|FLAG_EXPOSURE_EVENT\s*=\s*['"]\$flag_exposure['"]|class EventProcessor\b[\s\S]{0,2000}trackExposureEvent/;
+function skipReason(path, content) {
+  if (TEST_PATH.test(path)) return "test";
+  if (BUNDLE_NAME.test(path) || BUNDLE_DIR.test(path) || content.length > MAX_FILE_BYTES) return "bundle";
+  const lines = content.split("\n");
+  const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+  if (longest > 2e3 || content.length / Math.max(1, lines.length) > 500) return "minified";
+  if (SDK_SOURCE.test(content)) return "sdk-copy";
+  return null;
+}
 var JS_PACKAGES = ["@flagsmith/flagsmith", "flagsmith", "react-native-flagsmith"];
 var NODE_PACKAGES = ["@flagsmith/nodejs", "flagsmith-nodejs"];
 function sdkOfSpecifier(spec) {
@@ -2297,23 +2385,34 @@ function resolveName(ctx, global, raw) {
   const id = text.replace(/\s+/g, "").replace(/\?\./g, ".");
   return ctx.consts.get(id) ?? global.get(id) ?? null;
 }
+function opaqueInit(ctx, sdk, style, callOffset, client) {
+  const init = { loc: makeLoc(ctx, callOffset), sdk, style, enableEvents: null, apiUrl: null, eventsApiUrl: null, hasEventProcessorConfig: false, opaque: true };
+  if (client) init.client = client;
+  return init;
+}
 function initFromObject(ctx, open, sdk, style, callOffset, client) {
   const obj = parseObject(ctx.code, ctx.skel, open);
   if (!obj) return null;
-  const get = (k) => obj.props.find((p) => p.key === k);
+  const lastSpread = obj.spreads.length ? Math.max(...obj.spreads) : -1;
+  let opaque = obj.spreads.length > 0;
+  const get = (k) => obj.props.find((p) => p.key === k && p.index > lastSpread);
   const looksLikeFlagsmith = obj.props.some((p) => /^(environmentID|environmentKey|enableEvents|eventProcessorConfig|api|apiUrl|identity)$/.test(p.key));
-  if (!looksLikeFlagsmith && style === "init") return null;
+  if (!looksLikeFlagsmith && !opaque && style === "init") return null;
   const api = sdk === "node" ? get("apiUrl") ?? get("api") : get("api") ?? get("apiUrl");
   const epc = get("eventProcessorConfig");
   let eventsApiUrl = null;
   let eventsApiUrlLoc;
   if (epc && epc.value.startsWith("{")) {
     const inner = parseObject(ctx.code, ctx.skel, epc.valueOffset);
-    const ev = inner?.props.find((p) => p.key === "eventsApiUrl");
+    const innerLast = inner?.spreads.length ? Math.max(...inner.spreads) : -1;
+    if (inner?.spreads.length) opaque = true;
+    const ev = inner?.props.find((p) => p.key === "eventsApiUrl" && p.index > innerLast);
     if (ev) {
       eventsApiUrl = ev.value;
       eventsApiUrlLoc = makeLoc(ctx, ev.keyOffset);
     }
+  } else if (epc) {
+    opaque = true;
   }
   const openLine = ctx.lines.lineOf(open);
   const closeLine = ctx.lines.lineOf(obj.close);
@@ -2342,6 +2441,7 @@ function initFromObject(ctx, open, sdk, style, callOffset, client) {
   if (identity) init.identityExpr = normaliseExpr(identity.value);
   if (openLine !== closeLine) init.insertAfter = makeLoc(ctx, open);
   if (client) init.client = client;
+  if (opaque) init.opaque = true;
   return init;
 }
 function collectCalls(ctx, global, out, globalClients) {
@@ -2440,7 +2540,10 @@ function collectCalls(ctx, global, out, globalClients) {
           const m = new RegExp(`\\b(?:const|let|var)\\s+${a0.replace(/\$/g, "\\$")}\\s*(?::[^=]+)?=\\s*\\{`).exec(skel);
           if (m) open2 = m.index + m[0].length - 1;
         }
-        if (open2 < 0) return;
+        if (open2 < 0) {
+          out.inits.push(opaqueInit(ctx, sdkFor(name, "js"), "init", recvStart, client));
+          return;
+        }
         const init = initFromObject(ctx, open2, sdkFor(name, "js"), "init", recvStart, client);
         if (init) {
           out.inits.push(init);
@@ -2492,8 +2595,11 @@ function collectCalls(ctx, global, out, globalClients) {
       const mm = new RegExp(`\\b(?:const|let|var)\\s+${a0.replace(/\$/g, "\\$")}\\s*(?::[^=]+)?=\\s*\\{`).exec(skel);
       if (mm) objOpen = mm.index + mm[0].length - 1;
     }
-    if (objOpen < 0) continue;
     const lhs = /([A-Za-z_$][\w$]*)\s*(?::\s*[\w<>.[\]| ]+)?=\s*$/.exec(skel.slice(Math.max(0, m.index - 80), m.index));
+    if (objOpen < 0) {
+      out.inits.push(opaqueInit(ctx, "node", "constructor", m.index, lhs?.[1]));
+      continue;
+    }
     const init = initFromObject(ctx, objOpen, "node", "constructor", m.index, lhs?.[1]);
     if (init) out.inits.push(init);
   }
@@ -2511,7 +2617,10 @@ function collectCalls(ctx, global, out, globalClients) {
         if (mm) objOpen = mm.index + mm[0].length - 1;
       }
     }
-    if (objOpen < 0) continue;
+    if (objOpen < 0) {
+      out.inits.push(opaqueInit(ctx, "js", "provider", m.index));
+      continue;
+    }
     const init = initFromObject(ctx, objOpen, "js", "provider", m.index);
     if (init) {
       out.inits.push(init);
@@ -2543,6 +2652,8 @@ function scanFiles(input2, options = {}) {
   const files = input2.map((f) => ({ path: f.path.replace(/\\/g, "/").replace(/^\.\//, ""), content: f.content }));
   const packages = [];
   const installed = [];
+  const appRoots = /* @__PURE__ */ new Set();
+  const skipped = [];
   let usesFlagsmithMcp = false;
   for (const f of files) {
     if (isInstalledManifest(f.path)) {
@@ -2550,8 +2661,11 @@ function scanFiles(input2, options = {}) {
       if (inst) installed.push(inst);
       continue;
     }
-    if (IGNORED.test(f.path)) continue;
-    if (/(^|\/)package\.json$/.test(f.path)) packages.push(...readManifest(f.path, f.content));
+    if (IGNORED.test(f.path) || TEST_PATH.test(f.path) || BUNDLE_DIR.test(f.path)) continue;
+    if (/(^|\/)package\.json$/.test(f.path)) {
+      packages.push(...readManifest(f.path, f.content));
+      appRoots.add(f.path.replace(/(^|\/)package\.json$/, ""));
+    }
     if (MCP_FILES.test(f.path) && /flagsmith/i.test(f.content)) usesFlagsmithMcp = true;
   }
   for (const p of packages) {
@@ -2562,7 +2676,11 @@ function scanFiles(input2, options = {}) {
   const ctxs = [];
   for (const f of files) {
     if (!CODE_EXT.test(f.path) || IGNORED.test(f.path) || /\.d\.ts$/.test(f.path)) continue;
-    if (f.content.length > MAX_FILE_BYTES) continue;
+    const notAppCode = skipReason(f.path, f.content);
+    if (notAppCode) {
+      skipped.push({ file: f.path, reason: notAppCode });
+      continue;
+    }
     const { code, skeleton } = lex(f.content);
     const ctx = {
       path: f.path,
@@ -2652,6 +2770,8 @@ function scanFiles(input2, options = {}) {
   if (options.root) evidence.root = options.root;
   if (usesFlagsmithMcp) evidence.usesFlagsmithMcp = true;
   if (out.experimentUpdates.length) evidence.experimentUpdates = out.experimentUpdates.sort(byLoc);
+  if (appRoots.size) evidence.appRoots = [...appRoots].sort();
+  if (skipped.length) evidence.skipped = skipped.sort((a, b) => a.file.localeCompare(b.file));
   return evidence;
 }
 function countAll(c) {
