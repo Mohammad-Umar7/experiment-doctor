@@ -233,6 +233,45 @@ export function RescueClient() {
               />
               <HealthRow ok label="Conversion name matches the metric" detail="trackEvent('verified_repair') = metric event verified_repair" />
             </ul>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted">Reconciliation: our server vs Flagsmith</p>
+              <table className="mt-3 w-full font-mono text-[12px]">
+                <thead>
+                  <tr className="text-left text-fg-muted">
+                    <th className="pb-1.5 font-normal">variant</th>
+                    <th className="pb-1.5 text-right font-normal">exposed</th>
+                    <th className="pb-1.5 text-right font-normal">converted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {VARIANTS.map((v) => {
+                    const ours = stats?.fromFlagsmith?.[v.key];
+                    const theirs = fsByKey.get(v.flagsmithKey);
+                    const cell = (a: number | undefined, b: number | undefined) => {
+                      const off = a !== undefined && b !== undefined && Math.abs(a - b) > Math.max(1, 0.1 * Math.max(a, b));
+                      return (
+                        <span className={off ? "text-warning" : "text-fg-secondary"}>
+                          {a ?? 0} <span className="text-fg-muted">/</span> {b ?? "—"}
+                        </span>
+                      );
+                    };
+                    return (
+                      <tr key={v.key} className="border-t border-border/60">
+                        <td className="py-1.5 text-fg">{v.flagsmithKey}</td>
+                        <td className="py-1.5 text-right">{cell(ours?.enrolled, theirs?.exposed)}</td>
+                        <td className="py-1.5 text-right">{cell(ours?.repaired, theirs?.converted)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[11.5px] leading-[1.55] text-fg-muted">
+                Server first runs assigned by Flagsmith / what Flagsmith stored. Amber means they differ by more than 10%: usually a
+                snapshot older than the latest players, an ad blocker dropping the SDK&apos;s events, or a player who left before
+                the flush. Our server never trusts the browser for the conversion: it is only sent after a server-verified repair.
+              </p>
+            </div>
           </Panel>
 
           <Panel className="p-6">
