@@ -23,6 +23,7 @@ export const ed002: Rule = {
     if (!calls.length) return skip('No getExperimentFlag or useExperiment call was found.');
 
     const findings: Finding[] = [];
+    let unknownIdentity: string | null = null;
 
     // Node: the identifier is an argument.
     for (const c of calls.filter((x) => x.sdk === 'node' && !x.identifierExpr)) {
@@ -41,7 +42,10 @@ export const ed002: Rule = {
     const jsCalls = calls.filter((c) => c.sdk === 'js');
     if (jsCalls.length) {
       const ids = code.identifies.filter((i) => i.sdk === 'js' && (i.via === 'identify' || i.via === 'init-identity'));
-      if (ids.length === 0) {
+      const opaque = code.inits.find((i) => i.sdk === 'js' && i.opaque);
+      if (ids.length === 0 && opaque) {
+        unknownIdentity = `The SDK options at ${where(opaque.loc)} are built elsewhere, so an identity may be set there: unknown, not missing.`;
+      } else if (ids.length === 0) {
         findings.push(neverIdentifies(this, jsCalls[0]!, code.inits.find((i) => i.style === 'provider' && i.insertAfter)));
       } else {
         const ordering = orderingProblem(this, jsCalls, ids);
@@ -50,6 +54,7 @@ export const ed002: Rule = {
     }
 
     if (findings.length) return fail(findings);
+    if (unknownIdentity) return skip(unknownIdentity);
     return pass(`${calls.length === 1 ? 'The experiment flag is' : 'Experiment flags are'} read after the user is identified (static check).`);
   },
 };
