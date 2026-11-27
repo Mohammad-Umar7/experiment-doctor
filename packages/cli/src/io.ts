@@ -26,6 +26,8 @@ export interface Io {
   fetch: typeof fetch;
   /** Runs the official `flagsmith` CLI. */
   runFlagsmith(args: string[], input?: string): Promise<RunResult>;
+  /** Runs any other program (no shell), e.g. docker or psql for --event-store. */
+  runProcess(cmd: string, args: string[], input?: string): Promise<RunResult>;
   now(): Date;
   randomHex(bytes: number): string;
   sleep(ms: number): Promise<void>;
@@ -86,6 +88,7 @@ export function realIo(): Io {
       }
       return first;
     },
+    runProcess: (cmd, args, input) => run(cmd, args, input, process.env),
     now: () => new Date(),
     randomHex: (bytes) => randomBytes(bytes).toString('hex'),
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),

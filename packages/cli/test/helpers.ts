@@ -10,6 +10,7 @@ export interface FakeIo extends Io {
   err: () => string;
   calls: { args: string[]; input?: string }[];
   fetches: { url: string; init?: RequestInit }[];
+  processes: { cmd: string; args: string[]; input?: string }[];
 }
 
 export interface FakeOptions {
@@ -19,6 +20,8 @@ export interface FakeOptions {
   answers?: string[];
   fetch?: (url: string, init?: RequestInit) => Response | Promise<Response>;
   env?: Record<string, string>;
+  /** Fake for docker/psql calls made by --event-store. */
+  process?: (cmd: string, args: string[], input?: string) => RunResult;
 }
 
 export function fakeIo(opts: FakeOptions): FakeIo {
@@ -27,6 +30,7 @@ export function fakeIo(opts: FakeOptions): FakeIo {
   const answers = [...(opts.answers ?? [])];
   const calls: FakeIo['calls'] = [];
   const fetches: FakeIo['fetches'] = [];
+  const processes: FakeIo['processes'] = [];
   let clock = Date.parse('2026-11-27T10:00:00Z');
   return {
     cwd: opts.cwd,
@@ -52,6 +56,11 @@ export function fakeIo(opts: FakeOptions): FakeIo {
       if (v && typeof v === 'object' && '__result' in (v as object)) return (v as { __result: RunResult }).__result;
       return { code: 0, stdout: typeof v === 'string' ? v : JSON.stringify(v), stderr: '' };
     },
+    async runProcess(cmd: string, args: string[], input?: string): Promise<RunResult> {
+      processes.push({ cmd, args, input });
+      if (!opts.process) return { code: 127, stdout: '', stderr: '', notFound: true };
+      return opts.process(cmd, args, input);
+    },
     now: () => new Date(clock),
     randomHex: () => 'c0ffee42',
     sleep: async (ms: number) => {
@@ -61,6 +70,7 @@ export function fakeIo(opts: FakeOptions): FakeIo {
     err: () => stderr,
     calls,
     fetches,
+    processes,
   };
 }
 
