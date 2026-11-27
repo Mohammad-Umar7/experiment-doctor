@@ -39,6 +39,12 @@ function check(rule: Rule, ctx: RuleContext, init: InitEvidence, notes: string[]
   const apiOpt = init.sdk === 'node' ? 'apiUrl' : 'api';
   const indent = init.propIndent ?? '  ';
 
+  // Options built elsewhere: an unset api or eventsApiUrl here may be set by the spread or helper.
+  if (init.opaque && (init.apiUrl === null || init.eventsApiUrl === null)) {
+    notes.push(`The SDK options at ${init.loc.file}:${init.loc.line} are built elsewhere (a spread or a helper), so ${apiOpt} and eventsApiUrl cannot be checked statically.`);
+    return null;
+  }
+
   // 1. The app points flags at a self-hosted Flagsmith.
   if (apiLit && !isCloudUrl(apiLit)) {
     const expected = usesFlagsmithDb === false ? null : selfHostedEventsUrl(apiLit);
