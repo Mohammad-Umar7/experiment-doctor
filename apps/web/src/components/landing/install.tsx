@@ -15,9 +15,9 @@ const WAYS = [
     command: "cp -r skills/flagsmith-experiment-doctor ~/.claude/skills/",
   },
   {
-    title: "Self-hosted",
-    body: "Flagsmith with Experimentation enabled plus a broken sample app, in one command.",
-    command: "docker compose -f selfhost/docker-compose.yml up",
+    title: "CI Gate",
+    body: "Block pull requests that would silently stop an experiment from counting.",
+    command: "uses: Mohammad-Umar7/experiment-doctor@main",
   },
 ];
 
