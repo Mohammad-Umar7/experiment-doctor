@@ -1,26 +1,121 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Experiment Doctor design tokens.
+ * Green = verified healthy, red = evidenced failure, purple = action, gray = unknown.
+ */
+@theme {
+  --color-canvas: #090b0f;
+  --color-surface: #11141b;
+  --color-elevated: #181c25;
+  --color-border: #272d38;
+  --color-border-strong: #343b49;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-healthy: #22ff88;
+  --color-critical: #ff5263;
+  --color-accent: #6837fc;
+  --color-accent-hover: #7a4dff;
+  --color-warning: #f5b942;
+  --color-info: #60a5fa;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-fg: #f1f4f8;
+  --color-fg-secondary: #a0a8b8;
+  --color-fg-muted: #778195;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --radius-monitor: 16px;
+
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.24);
+  --shadow-healthy: 0 0 24px rgba(34, 255, 136, 0.12);
+  --shadow-critical: 0 0 20px rgba(255, 82, 99, 0.1);
+  --shadow-accent: 0 0 24px rgba(104, 55, 252, 0.25);
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --animate-ecg-sweep: ecg-sweep 2.4s linear infinite;
+  --animate-blink: blink 1.2s steps(2, start) infinite;
+  --animate-critical-pulse: critical-pulse 1.6s var(--ease-standard) infinite;
+
+  @keyframes ecg-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes blink {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  @keyframes critical-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
   }
 }
 
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: var(--color-canvas);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: rgba(104, 55, 252, 0.45);
+  color: var(--color-fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Faint grid used behind monitors and the hero */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(39, 45, 56, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 45, 56, 0.45) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Thin, quiet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
