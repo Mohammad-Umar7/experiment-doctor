@@ -55,7 +55,8 @@ describe('fix', () => {
 
   it('verify reports PATCH_UNVERIFIED when the evidence is gone', async () => {
     const dir = tempDir(APP_FILES);
-    await main(['fix', '--yes'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
+    await main(['check'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
+    expect(await main(['fix', '--yes'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }))).toBe(0);
     const v = fakeIo({ cwd: dir, flagsmith: null });
     expect(await main(['verify', '--json'], v)).toBe(0);
     expect(JSON.parse(v.out()).patch.status).toBe('PATCH_UNVERIFIED');
@@ -64,6 +65,7 @@ describe('fix', () => {
   it('refuses a patch when the file changed since the diagnosis', async () => {
     const dir = tempDir(APP_FILES);
     await main(['check', '--save-evidence', 'ev.json', '--no-save'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
+    await main(['check', '--evidence', 'ev.json'], fakeIo({ cwd: dir, flagsmith: null }));
     writeFileSync(join(dir, 'src', 'flags.ts'), read(dir).replace("trackEvent('Purchase')", "trackEvent('Purchase', {})"));
     const io = fakeIo({ cwd: dir, flagsmith: null });
     expect(await main(['fix', '--evidence', 'ev.json', '--yes'], io)).toBe(1);
@@ -89,6 +91,7 @@ describe('fix', () => {
     const state = flagsmithState();
     const detail = state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] as Record<string, unknown>;
     state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] = { ...detail, status: 'paused' };
+    await main(['check'], fakeIo({ cwd: dir, flagsmith: state }));
     const io = fakeIo({ cwd: dir, flagsmith: state });
     expect(await main(['fix', '--yes'], io)).toBe(3);
     expect(io.out()).toMatch(/not on the allowlist/);
@@ -114,5 +117,49 @@ describe('fix', () => {
     await main(['fix', '--dry-run', '--json'], io);
     expect(JSON.parse(io.out().trim().split('\n').pop()!)).toMatchObject({ action: 'dry-run', finding: 'ED-004' });
     expect(read(dir)).toContain("trackEvent('Purchase')");
+  });
+
+  it('--yes applies the same patch the last check showed, then verify binds to the repair time', async () => {
+    const dir = tempDir(APP_FILES);
+    const check = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    await main(['check', '--json'], check);
+    const shown = JSON.parse(check.out()).primary.fix.patch;
+    const io = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    expect(await main(['fix', '--yes', '--json'], io)).toBe(0);
+    expect(JSON.parse(io.out().trim().split('\n').pop()!)).toMatchObject({ action: 'patched', file: shown.file });
+    expect(read(dir)).toContain(shown.after.trim());
+    const v = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    await main(['verify', '--json'], v);
+    const out = JSON.parse(v.out());
+    expect(out.patch.status).toBe('PATCH_VERIFIED');
+    expect(out.window.reason).toBe('repair');
+  });
+
+  it('--yes refuses without a previous check', async () => {
+    const dir = tempDir(APP_FILES);
+    const io = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    expect(await main(['fix', '--yes'], io)).toBe(3);
+    expect(io.out()).toMatch(/only applies the change shown by the last check/);
+    expect(read(dir)).toContain("trackEvent('Purchase')");
+  });
+
+  it('--yes refuses when a fresh diagnosis would apply a different patch', async () => {
+    const dir = tempDir(APP_FILES);
+    await main(['check'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
+    // the line moves: the fresh patch targets another line than the one the human saw
+    writeFileSync(join(dir, 'src', 'flags.ts'), `// a new header line\n${read(dir)}`);
+    const io = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    expect(await main(['fix', '--yes'], io)).toBe(3);
+    expect(io.out()).toMatch(/differs from the one the last check showed \(src\/flags.ts:13\)/);
+    expect(read(dir)).toContain("trackEvent('Purchase')");
+  });
+
+  it('--yes refuses when the finding to fix changed', async () => {
+    const dir = tempDir(APP_FILES);
+    await main(['check'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
+    writeFileSync(join(dir, 'src', 'flags.ts'), read(dir).replace("trackEvent('Purchase')", "trackEvent('purchase')").replace('    enableEvents: true,\n', ''));
+    const io = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    expect(await main(['fix', '--yes'], io)).toBe(3);
+    expect(io.out()).toMatch(/changed since the last check \(ED-004 then, ED-009 now\)/);
   });
 });
