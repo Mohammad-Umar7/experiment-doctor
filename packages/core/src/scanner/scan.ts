@@ -46,6 +46,18 @@ const BUNDLE_NAME = /\.(min|bundle|umd|prod)\.[mc]?js$/i;
 /** Strings only the Flagsmith SDK's own source contains. */
 const SDK_SOURCE = /eventProcessorConfig requires enableEvents|ValueError: enableEvents must be true|this\.getExperimentFlag\s*=\s*function|FLAG_EXPOSURE_EVENT\s*=\s*['"]\$flag_exposure['"]|class EventProcessor\b[\s\S]{0,2000}trackExposureEvent/;
 
+/** "src/pages/a.ts" + "../lib/flags.js" -> "src/lib/flags". Null for package imports. */
+export function resolveRelative(from: string, spec: string): string | null {
+  if (!spec.startsWith('./') && !spec.startsWith('../')) return null;
+  const parts = from.split('/').slice(0, -1);
+  for (const seg of spec.split('/')) {
+    if (seg === '.' || seg === '') continue;
+    if (seg === '..') parts.pop();
+    else parts.push(seg);
+  }
+  return parts.join('/').replace(/\.(?:[mc]?[jt]sx?)$/i, '');
+}
+
 export function skipReason(path: string, content: string): SkippedFile['reason'] | null {
   if (TEST_PATH.test(path)) return 'test';
   if (BUNDLE_NAME.test(path) || BUNDLE_DIR.test(path) || content.length > MAX_FILE_BYTES) return 'bundle';
@@ -701,7 +713,10 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
     const used = countAll(out) > before || c.imports.some((i) => i.sdk) || c.clients.size > 0;
     if (used) {
       // exits found in files that never touch Flagsmith are noise
-      summaries.push({ file: c.path, runtime: classify(c, used), usesFlagsmith: true });
+      const summary: FileSummary = { file: c.path, runtime: classify(c, used), usesFlagsmith: true };
+      const local = c.imports.map((i) => resolveRelative(c.path, i.spec)).filter((p): p is string => p !== null);
+      if (local.length) summary.imports = [...new Set(local)].sort();
+      summaries.push(summary);
     } else {
       out.exits = out.exits.filter((e) => e.loc.file !== c.path);
     }

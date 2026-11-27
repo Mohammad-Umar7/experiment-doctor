@@ -286,6 +286,8 @@ export interface FileSummary {
   file: string;
   runtime: FileRuntime;
   usesFlagsmith: boolean;
+  /** Relative imports of this file, resolved to paths without extension (e.g. "src/lib/flags"). */
+  imports?: string[];
 }
 
 export interface CodeEvidence {
