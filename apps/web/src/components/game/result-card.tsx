@@ -17,6 +17,7 @@ const VARIANT_LABEL: Record<HintVariant, string> = {
 export function SuccessCard({
   elapsedMs,
   receipt,
+  share,
   counted,
   variant,
   caseTitle,
@@ -24,6 +25,7 @@ export function SuccessCard({
 }: {
   elapsedMs: number;
   receipt: string | null;
+  share: string | null;
   counted: boolean;
   variant: HintVariant;
   caseTitle: string;
@@ -43,7 +45,8 @@ export function SuccessCard({
   const diff = elapsedMs - DOCTOR_RECORD.ms;
   const beat = diff < 0;
   const time = formatMs(elapsedMs);
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/play` : "/play";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = share ? `${origin}/s/${share}` : `${origin}/play`;
   const shareText = beat
     ? `I fixed a broken A/B test in ${time} and beat the AI Doctor (${DOCTOR_RECORD.time}). Can you?`
     : `I fixed a broken Flagsmith experiment in ${time}. The AI Doctor did it in ${DOCTOR_RECORD.time}. Can you beat it?`;

@@ -2,6 +2,7 @@ import { getCase } from "@/lib/game/cases";
 import type { ReceiptPayload, SessionPayload } from "@/lib/game/types";
 import { verifyRepair } from "@/lib/game/verify";
 import { getStore } from "@/lib/server/store";
+import { shareCode } from "@/lib/server/share";
 import { sign, unsign } from "@/lib/server/token";
 import { bad, readJson } from "@/lib/server/validate";
 import { CHALLENGE_LIMIT_MS } from "@/lib/site";
@@ -59,5 +60,7 @@ export async function POST(request: Request) {
     firstSuccess,
     // Leaderboard spots are for counted runs repaired inside the time limit.
     receipt: withinLimit && session.counted ? sign(receipt) : null,
+    // Share links carry the verified time, signed so a card cannot claim a time nobody earned.
+    share: withinLimit ? shareCode(recordedMs, session.caseId) : null,
   });
 }

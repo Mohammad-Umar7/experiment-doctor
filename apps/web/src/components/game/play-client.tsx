@@ -51,6 +51,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [share, setShare] = useState<string | null>(null);
   const [revealBug, setRevealBug] = useState(false);
   const [sound, setSound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +148,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
     setStoppedAt(Date.now());
     setElapsedMs(data.elapsedMs);
     setReceipt(data.receipt ?? null);
+    setShare(data.share ?? null);
     setBrokenStage(null);
     sounds.success();
     if (counted && data.withinLimit && data.firstSuccess) void trackVerifiedRepair(data.elapsedMs);
@@ -321,6 +323,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
             <SuccessCard
               elapsedMs={elapsedMs}
               receipt={receipt}
+              share={share}
               counted={counted}
               variant={variant}
               caseTitle={`Case ${game.id}`}
