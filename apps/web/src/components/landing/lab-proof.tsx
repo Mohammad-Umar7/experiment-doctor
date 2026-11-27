@@ -55,13 +55,13 @@ export function LabProof() {
             <p className="border-b border-border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-critical">
               Before the fix
             </p>
-            <pre className="overflow-x-auto px-5 py-4 font-mono text-[12px] leading-[1.7] text-fg-secondary">{BEFORE}</pre>
+            <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-[1.7] text-fg-secondary">{BEFORE}</pre>
           </Reveal>
           <Reveal delay={0.12} className="overflow-hidden rounded-[var(--radius-card)] border border-healthy/30 bg-surface">
             <p className="border-b border-border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-healthy">
               After the approved patch
             </p>
-            <pre className="overflow-x-auto px-5 py-4 font-mono text-[12px] leading-[1.7] text-fg-secondary">{AFTER}</pre>
+            <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-[1.7] text-fg-secondary">{AFTER}</pre>
           </Reveal>
         </div>
       </div>
