@@ -39,6 +39,8 @@ export interface SdkRequirement {
   minVersion: string | null;
   /** Package to move to when this one cannot send events. */
   replacement?: string;
+  /** Latest release we know of (Nov 2026), used when suggesting an upgrade. */
+  recommended?: string;
   note: string;
 }
 
@@ -47,12 +49,14 @@ export const SDK_REQUIREMENTS: SdkRequirement[] = [
     name: '@flagsmith/flagsmith',
     kind: 'js',
     minVersion: '12.4.0',
+    recommended: '12.6.0',
     note: 'JavaScript and React SDK. Experiment exposures need 12.4.0 or newer.',
   },
   {
     name: '@flagsmith/nodejs',
     kind: 'node',
     minVersion: '9.1.0',
+    recommended: '9.5.0',
     note: 'Node.js SDK. Experiment events need 9.1.0 or newer.',
   },
   {

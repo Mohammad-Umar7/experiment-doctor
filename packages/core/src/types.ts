@@ -193,6 +193,7 @@ export interface InitEvidence {
   style: 'init' | 'constructor' | 'provider';
   /** Literal "true"/"false", another expression, or null when absent. */
   enableEvents: string | null;
+  enableEventsLoc?: SourceLocation;
   /** JS `api` or Node `apiUrl` value: a literal URL or an expression; null when absent. */
   apiUrl: string | null;
   apiUrlLoc?: SourceLocation;
@@ -381,7 +382,8 @@ export interface Finding {
   confidence: number;
 }
 
-export type CheckStatus = 'pass' | 'fail' | 'skip';
+/** pass: verified by evidence. fail: a blocking finding. skip: not enough evidence. pending: waiting for data. */
+export type CheckStatus = 'pass' | 'fail' | 'skip' | 'pending';
 
 export interface CheckResult {
   id: RuleId;

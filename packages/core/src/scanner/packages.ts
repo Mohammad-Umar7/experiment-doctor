@@ -33,7 +33,7 @@ export function readManifest(path: string, content: string): SdkPackageEvidence[
         name,
         kind: req.kind,
         range: typeof range === 'string' ? range : null,
-        manifest: { file: path, line: idx >= 0 ? idx + 1 : 1, snippet: idx >= 0 ? lines[idx]!.trim() : undefined },
+        manifest: idx >= 0 ? { file: path, line: idx + 1, snippet: lines[idx]!.trim(), text: lines[idx]! } : { file: path, line: 1 },
       });
     }
   }

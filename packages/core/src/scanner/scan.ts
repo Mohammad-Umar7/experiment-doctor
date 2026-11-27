@@ -314,6 +314,8 @@ function initFromObject(ctx: FileCtx, open: number, sdk: Sdk, style: InitEvidenc
     hasEventProcessorConfig: !!epc,
     propIndent,
   };
+  const enable = get('enableEvents');
+  if (enable) init.enableEventsLoc = makeLoc(ctx, enable.keyOffset);
   if (api) init.apiUrlLoc = makeLoc(ctx, api.keyOffset);
   if (eventsApiUrlLoc) init.eventsApiUrlLoc = eventsApiUrlLoc;
   const analytics = get('enableAnalytics');
