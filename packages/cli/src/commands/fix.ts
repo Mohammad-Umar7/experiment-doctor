@@ -5,7 +5,7 @@ import { FlagsmithCli } from '../flagsmith';
 import type { Io } from '../io';
 import { applyPatch, renderDiff } from '../patch';
 import { renderFinding } from '../render';
-import { looksLikeProduction, splitCommand } from '../safety';
+import { authorizeMutation, loadPolicy, POLICY_FILE, splitCommand } from '../safety';
 import { saveState } from '../state';
 import { performCheck } from './check';
 
@@ -16,11 +16,14 @@ Usage: experiment-doctor fix [options]
   --finding <ED-xxx>      fix this finding instead of the primary one
   --yes                   approve without the y/N prompt (you already reviewed it)
   --dry-run               show the change and stop
-  --allow-production      allow Flagsmith changes in an environment that looks like production
+  --allow-env <key|name>  allowlist an environment for Flagsmith changes (repeatable);
+                          or list it under "allowMutations" in ${POLICY_FILE}
   (plus --flag, --experiment, --dir, --evidence, --environment, --json as in check)
 
 Code changes are shown as a diff; Flagsmith changes are shown as the exact
-flagsmith command. Nothing is written without y. API keys are never printed.`;
+flagsmith command. Nothing is written without y. Flagsmith changes are refused
+unless the environment is allowlisted (--yes never skips that). API keys are
+never printed.`;
 
 interface FixOutcome {
   finding: RuleId | null;
@@ -36,7 +39,7 @@ export async function fixCommand(io: Io, argv: string[]): Promise<number> {
     finding: { type: 'string' },
     yes: { type: 'boolean', short: 'y', default: false },
     'dry-run': { type: 'boolean', default: false },
-    'allow-production': { type: 'boolean', default: false },
+    'allow-env': { type: 'string', multiple: true },
   });
   if (values.help) {
     io.stdout.write(`${FIX_HELP}\n`);
@@ -94,10 +97,13 @@ export async function fixCommand(io: Io, argv: string[]): Promise<number> {
   if (command?.writes) {
     const envName = run.evidence.config?.environment?.name;
     out(`\n  ${c.accent('$')} ${command.command}${command.input ? `\n    ${c.muted(`stdin: ${command.input}`)}` : ''}\n  ${c.muted(command.description)}`);
-    if (looksLikeProduction(envName) && !values['allow-production']) {
-      return finish({ finding: finding.id, action: 'refused', command: command.command, message: `Environment "${envName}" looks like production. Re-run with --allow-production if you really mean it.` }, 3);
+    // Fail closed: only an explicitly allowlisted environment may be changed.
+    const auth = authorizeMutation(loadPolicy(run.root, values['allow-env'] ?? []), { name: envName, key: run.envKey });
+    if (values['dry-run']) {
+      return finish({ finding: finding.id, action: 'dry-run', command: command.command, message: `Dry run: nothing changed in Flagsmith. ${auth.ok ? 'This environment is allowlisted.' : auth.reason}` }, 0);
     }
-    if (values['dry-run']) return finish({ finding: finding.id, action: 'dry-run', command: command.command, message: 'Dry run: nothing changed in Flagsmith.' }, 0);
+    if (!auth.ok) return finish({ finding: finding.id, action: 'refused', command: command.command, message: auth.reason }, 3);
+    if (auth.warning) out(`  ${c.warning('!')} ${auth.warning}`);
     if (!run.envKey) {
       return finish({ finding: finding.id, action: 'manual', command: command.command, message: 'No live Flagsmith session (evidence file mode). Run the command above yourself.' }, 0);
     }
