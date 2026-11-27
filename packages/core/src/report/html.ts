@@ -122,10 +122,10 @@ ${evidence ? `<h2>What we saw</h2><ul class="ev">${evidence}</ul>` : ''}
 
 function upstream(u: UpstreamMatch[]): string {
   if (!u.length) return '';
-  return `<section class="card"><h2>Possible upstream bugs</h2><p class="detail">These match known Flagsmith issues. They are not caused by your code, so the Doctor proposes no patch.</p>${u
+  return `<section class="card"><h2>Possibly related Flagsmith issues</h2><p class="detail">Symptoms may be consistent with these known Flagsmith issues. Confirm the affected operation and error before applying a workaround. The Doctor proposes no patch for them.</p>${u
     .map(
       (m) =>
-        `<details><summary><span class="tag">#${m.issue}</span><span class="tag">${m.state}</span>${esc(m.title)}</summary><div style="padding-top:8px"><p class="detail">Matched: ${esc(m.matched.join('; '))}</p><p>${m.workaround ? `Workaround${m.workaroundSource ? ` (from the ${m.workaroundSource})` : ''}: ${md(m.workaround)}` : 'No workaround is documented.'}</p><p><a href="${esc(m.url)}">${esc(m.url)}</a></p></div></details>`,
+        `<details><summary><span class="tag">#${m.issue}</span><span class="tag">${m.state} · checked ${esc(m.checkedOn)}</span>${esc(m.title)}</summary><div style="padding-top:8px"><p class="detail">${esc(m.note)}</p><p class="detail">Matched: ${esc(m.matched.join('; '))} (${Math.round(m.confidence * 100)}% confidence)</p><p>${m.workaround ? `Workaround${m.workaroundSource ? ` (from the ${m.workaroundSource})` : ''}: ${md(m.workaround)}` : 'No workaround is documented.'}</p><p><a href="${esc(m.url)}">${esc(m.url)}</a></p></div></details>`,
     )
     .join('')}</section>`;
 }
