@@ -184,7 +184,7 @@ export function verifyRepair(code: string, target: VerifyTarget): VerifyResult {
       ecmaVersion: "latest",
       sourceType: "module",
       allowAwaitOutsideFunction: true,
-    }) as AnyNode;
+    }) as unknown as AnyNode;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Syntax error";
     return finish([check("parse", false, message)]);
