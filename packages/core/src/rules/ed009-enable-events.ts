@@ -23,8 +23,19 @@ export const ed009: Rule = {
     const off = visible.filter((i) => i.enableEvents === null || i.enableEvents === 'false');
     const dynamic = visible.filter((i) => i.enableEvents !== null && i.enableEvents !== 'true' && i.enableEvents !== 'false');
 
-    if (off.length) {
-      const init = off[0]!;
+    // Only blame an init that plausibly serves the experiment calls: same file, the only init,
+    // or imported by a file with experiment calls. If every init lacks enableEvents, all are to blame.
+    const expFiles = [...new Set([...code.experimentFlags, ...code.trackEvents, ...code.exposures].map((x) => x.loc.file))];
+    const stem = (p: string) => p.replace(/\.(?:[mc]?[jt]sx?)$/i, '');
+    const importedBy = (initFile: string, file: string) =>
+      (code.files.find((f) => f.file === file)?.imports ?? []).some((imp) => imp === stem(initFile) || `${imp}/index` === stem(initFile));
+    const serves = (i: InitEvidence) => expFiles.length === 0 || code.inits.length === 1 || expFiles.includes(i.loc.file) || expFiles.some((f) => importedBy(i.loc.file, f));
+    const everyInitOff = unknown.length === 0 && off.length === visible.length;
+    const blamed = off.filter((i) => everyInitOff || serves(i));
+    const excused = off.filter((i) => !blamed.includes(i));
+
+    if (blamed.length) {
+      const init = blamed[0]!;
       return fail([
         makeFinding(this, {
           severity: 'critical',
@@ -40,6 +51,12 @@ export const ed009: Rule = {
     if (unknown.length) notes.push(`The SDK options at ${unknown.map((i) => where(i.loc)).join(', ')} are built elsewhere (a spread or a helper), so enableEvents cannot be read: unknown, not missing.`);
     if (dynamic.length) notes.push(`enableEvents is computed at runtime (\`${dynamic[0]!.enableEvents}\` at ${where(dynamic[0]!.enableEventsLoc ?? dynamic[0]!.loc)}); make sure it is true where the experiment runs.`);
     if (notes.length) return skip(notes.join(' '));
+    const on = visible.filter((i) => i.enableEvents === 'true');
+    if (excused.length) {
+      return pass(
+        `enableEvents: true is set where the experiment runs (${on.map((i) => where(i.loc)).join(', ')}). ${excused.map((i) => where(i.loc)).join(', ')} has no enableEvents, but no experiment call uses that init, so it is not a defect.`,
+      );
+    }
     return pass(`enableEvents: true is set (${code.inits.map((i) => where(i.loc)).join(', ')}).`);
   },
 };
