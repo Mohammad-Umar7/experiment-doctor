@@ -84,3 +84,30 @@ export async function start(user) {
     expect(report.checks[0]).toMatchObject({ status: 'skip', note: 'Check could not run: bad' });
   });
 });
+
+describe('zero conversions or events alone', () => {
+  it('is PENDING, never REPAIR_REQUIRED', () => {
+    const ev = healthyEvidence();
+    ev.config!.results!.metrics[0]!.variants = [
+      { variant: 'control', identities: 400, conversions: 0 },
+      { variant: 'green', identities: 380, conversions: 0 },
+    ];
+    ev.config!.warehouses![0]!.totalEventsReceived = 0;
+    const report = diagnose(ev);
+    expect(report.verdict).toBe('PENDING');
+    expect(report.pipeline.some((n) => n.status === 'broken')).toBe(false);
+    expect(report.summary).not.toMatch(/broken|repair/i);
+  });
+
+  it('is UNVERIFIABLE (not broken) without code evidence', () => {
+    const ev = healthyEvidence();
+    ev.code = null;
+    ev.config!.results!.metrics[0]!.variants = [
+      { variant: 'control', identities: 400, conversions: 0 },
+      { variant: 'green', identities: 380, conversions: 0 },
+    ];
+    const report = diagnose(ev);
+    expect(['PENDING', 'UNVERIFIABLE']).toContain(report.verdict);
+    expect(report.findings.some((f) => f.kind === 'defect' && f.severity !== 'info')).toBe(false);
+  });
+});
