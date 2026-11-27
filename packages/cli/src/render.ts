@@ -104,9 +104,9 @@ export function renderReport(report: Report, c: Palette, opts: { notes?: string[
     }
   }
   if (report.upstream.length) {
-    out.push('', `  ${c.secondary('Possible upstream bugs')} ${c.muted('(not your code; no patch)')}`);
+    out.push('', `  ${c.secondary('Possibly related Flagsmith issues')} ${c.muted('(confirm the operation and error first; no patch)')}`);
     for (const u of report.upstream) {
-      out.push(`    ${c.muted(`#${u.issue}`)} ${u.title} ${c.muted(`(${u.state})`)}`);
+      out.push(`    ${c.muted(`#${u.issue}`)} ${u.title} ${c.muted(`(${u.state} as of ${u.checkedOn}, ${Math.round(u.confidence * 100)}% match)`)}`);
       out.push(wrap(c.muted(u.workaround ? `Workaround: ${u.workaround}` : 'No workaround is documented.'), '      '));
       out.push(`      ${c.info(u.url)}`);
     }
