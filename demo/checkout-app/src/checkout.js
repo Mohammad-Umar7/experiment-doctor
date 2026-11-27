@@ -9,7 +9,7 @@ export async function mountCheckout(user, root) {
   button.addEventListener("click", async () => {
     await placeOrder();
     // Conversion for the checkout_button experiment
-    flagsmith.trackEvent("purchase");
+    flagsmith.trackEvent("Purchase");
   });
   root.append(button);
 }
