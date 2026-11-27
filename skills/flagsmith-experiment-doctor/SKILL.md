@@ -5,13 +5,13 @@ license: MIT
 compatibility: Needs Node 20+ and npx. Flagsmith CLI v2 (flagsmith) for live config checks; without it the skill still checks the code.
 metadata:
   author: FirstCommit (Toggle Wars 2026)
-  version: "0.3.0"
-allowed-tools: Bash(npx experiment-doctor check:*) Bash(npx experiment-doctor verify:*) Bash(flagsmith --version) Read
+  version: "0.4.0"
+allowed-tools: Bash(npx experiment-doctor check:*) Bash(npx experiment-doctor verify:*) Bash(node scripts/run-doctor.mjs check:*) Bash(node scripts/run-doctor.mjs verify:*) Bash(flagsmith --version) Read
 ---
 
 # Flagsmith Experiment Doctor
 
-Do the whole job with the `experiment-doctor` CLI. Do not read the Flagsmith docs: the rules already encode them. Read only what each step below names. `scripts/run-doctor.mjs <command>` finds the CLI (local build, installed, a release tarball, or npx).
+Do the whole job with the `experiment-doctor` CLI. Do not read the Flagsmith docs: the rules already encode them. Read only what each step below names. The `npx experiment-doctor` commands below assume the CLI is installed in the project. If `npx experiment-doctor --version` fails there, run each command as `node <this skill folder>/scripts/run-doctor.mjs <command>` instead: it uses a local build, the project install, or the pinned v0.2.0 release tarball. Never let npx fetch the bare name `experiment-doctor` from the npm registry: this project does not publish it there, so anything under that name would be someone else's code.
 
 ## Workflow
 
