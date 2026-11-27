@@ -2,7 +2,9 @@ import { Reveal } from "@/components/reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { Eyebrow, Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status-pill";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { doctorRecordFor } from "@/lib/doctor-record";
+
+const DOCTOR_001 = doctorRecordFor("001");
 
 export function ChallengeTeaser() {
   return (
@@ -13,7 +15,7 @@ export function ChallengeTeaser() {
           <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">Beat the machine.</h2>
           <p className="mt-3 max-w-[520px] text-[15px] leading-[1.6] text-fg-secondary">
             A real broken experiment, a code editor and three minutes. The Doctor repaired it in{" "}
-            <span className="font-mono text-fg">{DOCTOR_RECORD.time}</span>. Your repair is verified by the server, not by a
+            <span className="font-mono text-fg">{DOCTOR_001.time}</span>. Your repair is verified by the server, not by a
             button click, and the fastest humans go on the board.
           </p>
           <div className="mt-6 rounded-[var(--radius-card)] border border-accent/30 bg-accent/[0.06] p-4 text-[13px] leading-[1.6] text-fg-secondary">
@@ -49,8 +51,8 @@ export function ChallengeTeaser() {
               </div>
               <div className="px-5 py-4">
                 <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-muted">Doctor&apos;s record</p>
-                <p className="mt-1 font-mono text-[32px] font-medium tabular text-healthy">{DOCTOR_RECORD.time}</p>
-                <p className="font-mono text-[11px] text-fg-muted">{DOCTOR_RECORD.tokens.toLocaleString("en-US")} tokens · verified</p>
+                <p className="mt-1 font-mono text-[32px] font-medium tabular text-healthy">{DOCTOR_001.time}</p>
+                <p className="font-mono text-[11px] text-fg-muted">{DOCTOR_001.turns} agent turns · {DOCTOR_001.model}</p>
               </div>
             </div>
             <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-[1.8] text-fg-secondary">
