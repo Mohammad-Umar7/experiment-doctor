@@ -32,26 +32,47 @@ export function Hero() {
             {...rise(2)}
             className="animate-rise mx-auto mt-5 max-w-[560px] text-pretty text-[15px] leading-[1.6] text-fg-secondary sm:text-base"
           >
-            Diagnose broken A/B tests with evidence, not guesses. Repair them with one approved patch. Catch the next one in CI.
-            Then race the AI doctor at fixing one.
+            An open-source debugger that diagnoses broken Flagsmith experiments, verifies repairs against real stored
+            events, and catches regressions before they ship.
           </p>
           <div {...rise(3)}>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <ButtonLink href="/play" size="lg">
-                Challenge the Doctor
+              <ButtonLink href="/report" size="lg">
+                Diagnose an experiment
                 <span aria-hidden>→</span>
               </ButtonLink>
-              <ButtonLink href="#install" size="lg" variant="secondary">
-                Run it on your experiment
+              <ButtonLink href="/play" size="lg" variant="secondary">
+                Challenge the Doctor
               </ButtonLink>
             </div>
           </div>
           <p {...rise(4)} className="animate-rise mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-fg-muted">
-            No account needed · 3-minute challenge
+            Open source · Runs locally · No credentials uploaded
+          </p>
+          <a
+            {...rise(5)}
+            href="https://github.com/Mohammad-Umar7/experiment-doctor/blob/main/bench/BENCHMARK.md"
+            target="_blank"
+            rel="noreferrer"
+            className="animate-rise mx-auto mt-6 grid max-w-[640px] grid-cols-3 divide-x divide-border overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface/70 text-left transition-colors hover:border-border-strong"
+          >
+            {[
+              ["6/6 vs 3/6", "game bugs fixed, with vs without the Doctor"],
+              ["3/3", "root causes on a real self-hosted setup"],
+              ["~54%", "lower agent cost on that setup"],
+            ].map(([n, l]) => (
+              <span key={n} className="block px-3 py-3 sm:px-4">
+                <span className="block font-mono text-[18px] font-medium text-fg sm:text-[20px]">{n}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-[1.4] text-fg-muted">{l}</span>
+              </span>
+            ))}
+          </a>
+          <p {...rise(5)} className="animate-rise mt-2 text-[11px] text-fg-muted">
+            Claude Sonnet 5.5, small samples, losses included. Easy cases are faster without it.
           </p>
         </div>
 
-        <div {...rise(5)}>
+        <div {...rise(6)}>
           <div className="mx-auto mt-12 max-w-[920px]">
             <VitalsMonitor />
             <p className="mt-3 text-center font-mono text-[11px] text-fg-muted">
