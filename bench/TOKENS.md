@@ -1,6 +1,6 @@
 # Token use: skill vs a plain agent
 
-Template for the Toggle Wars Track 4 entry. The numbers are filled in after the runs; nothing below is a result yet.
+**Results are in [BENCHMARK.md](BENCHMARK.md)** (18 runs, Claude Sonnet 5.5, losses included). This file keeps the original plan for reference.
 
 ## Question
 
