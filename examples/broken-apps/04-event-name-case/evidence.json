@@ -98,7 +98,11 @@
       {
         "file": "src/main.tsx",
         "runtime": "react",
-        "usesFlagsmith": true
+        "usesFlagsmith": true,
+        "imports": [
+          "src/App",
+          "src/session"
+        ]
       }
     ],
     "packages": [

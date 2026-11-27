@@ -68,7 +68,10 @@
       {
         "file": "simulate.ts",
         "runtime": "node-script",
-        "usesFlagsmith": true
+        "usesFlagsmith": true,
+        "imports": [
+          "users"
+        ]
       }
     ],
     "packages": [

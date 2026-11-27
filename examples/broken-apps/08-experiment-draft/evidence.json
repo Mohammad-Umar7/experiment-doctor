@@ -64,12 +64,18 @@
       {
         "file": "src/checkout.ts",
         "runtime": "browser",
-        "usesFlagsmith": true
+        "usesFlagsmith": true,
+        "imports": [
+          "src/session"
+        ]
       },
       {
         "file": "src/flags.ts",
         "runtime": "browser",
-        "usesFlagsmith": true
+        "usesFlagsmith": true,
+        "imports": [
+          "src/session"
+        ]
       }
     ],
     "packages": [
