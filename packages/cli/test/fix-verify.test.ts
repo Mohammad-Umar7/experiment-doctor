@@ -18,7 +18,7 @@ describe('fix', () => {
     expect(read(dir)).toContain("trackEvent('Purchase')");
   });
 
-  it('applies the patch on y, then verify reports VERIFIED', async () => {
+  it('applies the patch on y, then verify reports patch, pipeline and experiment separately', async () => {
     const dir = tempDir(APP_FILES);
     const io = fakeIo({ cwd: dir, flagsmith: flagsmithState(), answers: ['y'] });
     expect(await main(['fix'], io)).toBe(0);
@@ -28,24 +28,37 @@ describe('fix', () => {
     const v = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
     expect(await main(['verify', '--json'], v)).toBe(0);
     const out = JSON.parse(v.out());
-    expect(out).toMatchObject({ status: 'VERIFIED', target: 'ED-004', resolved: ['ED-004'], verdictAfter: 'HEALTHY' });
+    expect(out).toMatchObject({
+      v: 2,
+      patch: { status: 'PATCH_VERIFIED', target: 'ED-004' },
+      pipeline: { status: 'PIPELINE_UNVERIFIED' },
+      experiment: { status: 'EXPERIMENT_HEALTHY', verdict: 'HEALTHY' },
+      resolved: ['ED-004'],
+    });
+    expect(out.status).toBeUndefined();
+
+    const text = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
+    await main(['verify'], text);
+    expect(text.out()).toContain('✓ PATCH_VERIFIED');
+    expect(text.out()).toContain('? PIPELINE_UNVERIFIED');
+    expect(text.out()).toContain('✓ EXPERIMENT_HEALTHY');
   });
 
-  it('verify reports FAILED when nothing changed', async () => {
+  it('verify reports PATCH_FAILED when nothing changed', async () => {
     const dir = tempDir(APP_FILES);
     await main(['check', '--no-save'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
     await main(['check'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
     const v = fakeIo({ cwd: dir, flagsmith: flagsmithState() });
     expect(await main(['verify'], v)).toBe(1);
-    expect(v.out()).toContain('✕ FAILED');
+    expect(v.out()).toContain('✕ PATCH_FAILED');
   });
 
-  it('verify reports PENDING when the evidence is gone', async () => {
+  it('verify reports PATCH_UNVERIFIED when the evidence is gone', async () => {
     const dir = tempDir(APP_FILES);
     await main(['fix', '--yes'], fakeIo({ cwd: dir, flagsmith: flagsmithState() }));
     const v = fakeIo({ cwd: dir, flagsmith: null });
     expect(await main(['verify', '--json'], v)).toBe(0);
-    expect(JSON.parse(v.out()).status).toBe('PENDING');
+    expect(JSON.parse(v.out()).patch.status).toBe('PATCH_UNVERIFIED');
   });
 
   it('refuses a patch when the file changed since the diagnosis', async () => {
@@ -64,21 +77,34 @@ describe('fix', () => {
     state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] = { ...detail, status: 'created' };
     state[`api api/v1/environments/${ENV_KEY}/experiments/42/start/ -X POST`] = { id: 42, status: 'running' };
     const io = fakeIo({ cwd: dir, flagsmith: state, answers: ['y'] });
-    expect(await main(['fix'], io)).toBe(0);
+    expect(await main(['fix', '--allow-env', 'Staging'], io)).toBe(0);
     expect(io.out()).toContain('flagsmith api api/v1/environments/<env-key>/experiments/42/start/ -X POST');
     expect(io.err()).toContain('Run this against environment "Staging"? [y/N]');
     expect(io.out()).not.toContain(ENV_KEY);
     expect(io.calls.at(-1)!.args).toEqual(['api', `api/v1/environments/${ENV_KEY}/experiments/42/start/`, '-X', 'POST']);
   });
 
-  it('refuses config changes in a production-looking environment', async () => {
+  it('refuses config changes in any environment that is not allowlisted, even with --yes', async () => {
     const dir = tempDir({ ...APP_FILES, 'src/flags.ts': APP_FILES['src/flags.ts']!.replace("'Purchase'", "'purchase'") });
+    const state = flagsmithState();
+    const detail = state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] as Record<string, unknown>;
+    state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] = { ...detail, status: 'paused' };
+    const io = fakeIo({ cwd: dir, flagsmith: state });
+    expect(await main(['fix', '--yes'], io)).toBe(3);
+    expect(io.out()).toMatch(/not on the allowlist/);
+    expect(io.calls.some((c) => c.args.includes('-X'))).toBe(false);
+  });
+
+  it('allowlisting decides; a production-looking name only adds a warning', async () => {
+    const dir = tempDir({ ...APP_FILES, 'src/flags.ts': APP_FILES['src/flags.ts']!.replace("'Purchase'", "'purchase'"), '.experiment-doctor.json': JSON.stringify({ allowMutations: ['Production'] }) });
     const state = flagsmithState({ [`api api/v1/environments/${ENV_KEY}/`]: { name: 'Production', api_key: ENV_KEY } });
     const detail = state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] as Record<string, unknown>;
     state[`api api/v1/environments/${ENV_KEY}/experiments/42/`] = { ...detail, status: 'paused' };
-    const io = fakeIo({ cwd: dir, flagsmith: state, answers: ['y'] });
-    expect(await main(['fix'], io)).toBe(3);
-    expect(io.out()).toMatch(/looks like production/);
+    state[`api api/v1/environments/${ENV_KEY}/experiments/42/start/ -X POST`] = { id: 42, status: 'running' };
+    const io = fakeIo({ cwd: dir, flagsmith: state, answers: ['n'] });
+    expect(await main(['fix'], io)).toBe(0);
+    expect(io.out()).toMatch(/looks like a production environment/);
+    expect(io.out()).toContain('Not run. Nothing changed in Flagsmith.');
     expect(io.calls.some((c) => c.args.includes('-X'))).toBe(false);
   });
 

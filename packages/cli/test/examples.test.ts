@@ -34,6 +34,6 @@ describe('example broken apps', () => {
     expect(readFileSync(join(dir, 'src', 'flags.ts'), 'utf8')).toContain('flagsmith.getExperimentFlag(CHECKOUT_FLAG)?.value');
     const verify = fakeIo({ cwd: dir, flagsmith: null });
     await main(['verify', '--json'], verify);
-    expect(JSON.parse(verify.out())).toMatchObject({ status: 'VERIFIED', target: 'ED-011' });
+    expect(JSON.parse(verify.out())).toMatchObject({ patch: { status: 'PATCH_VERIFIED', target: 'ED-011' }, pipeline: { status: 'PIPELINE_UNVERIFIED' } });
   });
 });
