@@ -97,6 +97,19 @@ export function SuccessCard({
         )}
       </p>
 
+      <p className="mt-2 text-[12.5px] text-fg-muted">
+        The Doctor&apos;s time is a measured run: {doctor.model} with the Doctor skill, {doctor.turns} agent turns, $
+        {doctor.costUsd.toFixed(2)}.{" "}
+        <a
+          href="https://github.com/Mohammad-Umar7/experiment-doctor/blob/main/bench/BENCHMARK.md"
+          target="_blank"
+          rel="noreferrer"
+          className="text-fg-secondary underline-offset-4 hover:text-fg hover:underline"
+        >
+          How it was measured
+        </a>
+      </p>
+
       {counted && (
         <p className="mt-4 rounded-md border border-border bg-canvas/60 px-3 py-2 text-[12.5px] text-fg-muted">
           This run counted in the Flagsmith experiment. Your hint style was the{" "}
