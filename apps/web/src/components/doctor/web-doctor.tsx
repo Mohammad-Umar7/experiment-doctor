@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 
 type Mode = "code" | "json";
 
-const SAMPLE = CASES[3]; // "Two faces": identity mismatch, a bug that is easy to miss in review
+const DEFAULT_SAMPLE = CASES[3]; // "Two faces": identity mismatch, a bug that is easy to miss in review
 
 function configFrom(flag: string, metric: string, variants: string): Evidence["config"] {
   const keys = variants
@@ -37,10 +37,23 @@ function isReport(value: unknown): value is Report {
 
 export function WebDoctor() {
   const [mode, setMode] = useState<Mode>("code");
-  const [file, setFile] = useState(SAMPLE.file);
-  const [code, setCode] = useState(SAMPLE.code);
-  const [flag, setFlag] = useState(SAMPLE.config.flag);
-  const [metric, setMetric] = useState(SAMPLE.config.metric);
+  const [sampleId, setSampleId] = useState(DEFAULT_SAMPLE.id);
+  const [file, setFile] = useState(DEFAULT_SAMPLE.file);
+  const [code, setCode] = useState(DEFAULT_SAMPLE.code);
+  const [flag, setFlag] = useState(DEFAULT_SAMPLE.config.flag);
+  const [metric, setMetric] = useState(DEFAULT_SAMPLE.config.metric);
+
+  function loadSample(id: string) {
+    const sample = CASES.find((c) => c.id === id);
+    if (!sample) return;
+    setSampleId(id);
+    setFile(sample.file);
+    setCode(sample.code);
+    setFlag(sample.config.flag);
+    setMetric(sample.config.metric);
+    setReport(null);
+    setError(null);
+  }
   const [variants, setVariants] = useState("one_click");
   const [json, setJson] = useState("");
   const [report, setReport] = useState<Report | null>(null);
@@ -113,7 +126,21 @@ export function WebDoctor() {
                     onChange={(e) => setFile(e.target.value)}
                     className="h-7 w-48 rounded-md bg-transparent px-1 font-mono text-[12px] text-fg focus:bg-canvas focus:outline-none"
                   />
-                  <span className="font-mono text-[11px] text-fg-muted">sample: case {SAMPLE.id}, replace with your own</span>
+                  <label htmlFor="sample" className="sr-only">
+                    Load a sample
+                  </label>
+                  <select
+                    id="sample"
+                    value={sampleId}
+                    onChange={(e) => loadSample(e.target.value)}
+                    className="ml-auto h-7 rounded-md border border-border bg-canvas px-2 font-mono text-[11px] text-fg-secondary focus:border-accent focus:outline-none"
+                  >
+                    {CASES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        sample {c.id}: {c.title} ({c.failureId})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <CodeEditor value={code} onChange={setCode} onSubmit={run} label="Code to diagnose" className="max-h-[520px] min-h-[380px]" />
               </div>
