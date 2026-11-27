@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/doctor.tgz",
-        destination: "https://github.com/Mohammad-Umar7/experiment-doctor/releases/download/v0.1.0/experiment-doctor-0.1.0.tgz",
+        destination: "https://github.com/Mohammad-Umar7/experiment-doctor/releases/download/v0.2.0/experiment-doctor-0.2.0.tgz",
         permanent: false,
       },
     ];

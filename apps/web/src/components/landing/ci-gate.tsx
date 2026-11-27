@@ -6,7 +6,7 @@ import { REPO_URL } from "@/lib/site";
 
 const WORKFLOW = `- uses: actions/checkout@v5
   with: { fetch-depth: 0 }
-- uses: Mohammad-Umar7/experiment-doctor@v0.1.0`;
+- uses: Mohammad-Umar7/experiment-doctor@v0.2.0`;
 
 export function CiGate() {
   return (
