@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/panel";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { doctorRecordFor } from "@/lib/doctor-record";
 import { formatMs } from "@/lib/game/time";
 import { readShareCode } from "@/lib/server/share";
 
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const time = formatMs(share.ms);
   return {
     title: `Fixed a broken A/B test in ${time}`,
-    description: `A verified repair of "${share.caseTitle}" in ${time}. The AI Doctor did it in ${DOCTOR_RECORD.time}. Can you beat it?`,
+    description: `A verified repair of "${share.caseTitle}" in ${time}. The AI Doctor did it in ${doctorRecordFor(share.caseId).time}. Can you beat it?`,
   };
 }
 
@@ -30,16 +30,16 @@ async function ShareBody({ params }: Props) {
       </>
     );
   }
-  const beat = share.ms < DOCTOR_RECORD.ms;
+  const beat = share.ms < doctorRecordFor(share.caseId).ms;
   return (
     <>
       <p className="mt-4 font-mono text-[56px] font-medium leading-none tabular text-fg sm:text-[72px]">{formatMs(share.ms)}</p>
       <p className="mt-4 text-[16px] text-fg-secondary">
         A server-verified repair of case {share.caseId}, &quot;{share.caseTitle}&quot;.{" "}
         {beat ? (
-          <span className="text-healthy">Faster than the AI Doctor ({DOCTOR_RECORD.time}).</span>
+          <span className="text-healthy">Faster than the AI Doctor ({doctorRecordFor(share.caseId).time}).</span>
         ) : (
-          <span>The AI Doctor did it in {DOCTOR_RECORD.time}.</span>
+          <span>The AI Doctor did it in {doctorRecordFor(share.caseId).time}.</span>
         )}
       </p>
     </>

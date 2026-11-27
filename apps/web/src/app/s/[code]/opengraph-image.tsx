@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { doctorRecordFor } from "@/lib/doctor-record";
 import { formatMs } from "@/lib/game/time";
 import { readShareCode } from "@/lib/server/share";
 
@@ -13,7 +13,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const { code } = await params;
   const share = readShareCode(code);
   const time = share ? formatMs(share.ms) : "--:--.--";
-  const beat = share ? share.ms < DOCTOR_RECORD.ms : false;
+  const beat = share ? share.ms < doctorRecordFor(share.caseId).ms : false;
 
   return new ImageResponse(
     (
@@ -43,7 +43,11 @@ export default async function Image({ params }: { params: Promise<{ code: string
           </div>
           <div style={{ fontSize: 150, fontWeight: 600, letterSpacing: -4, lineHeight: 1 }}>{time}</div>
           <div style={{ display: "flex", fontSize: 30, marginTop: 12, color: beat ? "#22FF88" : "#A0A8B8" }}>
-            {beat ? `Faster than the AI Doctor (${DOCTOR_RECORD.time})` : `The AI Doctor: ${DOCTOR_RECORD.time}`}
+            {!share
+              ? "Fix a broken A/B test in 3 minutes"
+              : beat
+                ? `Faster than the AI Doctor (${doctorRecordFor(share.caseId).time})`
+                : `The AI Doctor: ${doctorRecordFor(share.caseId).time}`}
           </div>
         </div>
 
