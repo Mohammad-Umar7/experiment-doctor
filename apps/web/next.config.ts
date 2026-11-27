@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   outputFileTracingRoot: monorepoRoot,
+  // Short install URL for the CLI: npx -y --package=https://<site>/doctor.tgz experiment-doctor check
+  async redirects() {
+    return [
+      {
+        source: "/doctor.tgz",
+        destination: "https://github.com/Mohammad-Umar7/experiment-doctor/releases/download/v0.1.0/experiment-doctor-0.1.0.tgz",
+        permanent: false,
+      },
+    ];
+  },
   turbopack: {
     root: monorepoRoot,
     rules: {
