@@ -128,7 +128,7 @@ function nextHint(report: Report): string {
   const p = report.primaryFinding;
   if (report.verdict === 'REPAIR_REQUIRED') return p?.fix.patch || p?.fix.command?.writes ? 'experiment-doctor fix   (shows the change and asks before writing)' : 'apply the fix above, then experiment-doctor verify';
   if (report.verdict === 'PENDING') return 'let traffic accumulate, then experiment-doctor verify';
-  if (report.verdict === 'UNVERIFIABLE') return report.coverage.config ? 'experiment-doctor canary --environment <test env>  (optional active probe)' : 'log in to the Flagsmith CLI so the config can be checked: flagsmith login';
+  if (report.verdict === 'UNVERIFIABLE') return report.coverage.config ? 'experiment-doctor canary --environment <test env> --allow-env <test env>  (optional ingestion probe)' : 'log in to the Flagsmith CLI so the config can be checked: flagsmith login';
   return '';
 }
 

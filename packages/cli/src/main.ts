@@ -16,9 +16,9 @@ Usage: experiment-doctor <command> [options]
 Commands
   check     passive, read-only diagnosis of Flagsmith config + your code
   fix       show the primary finding's patch or flagsmith command, apply after y/N
-  verify    re-run check and compare with the last report (VERIFIED / FAILED / PENDING)
-  canary    active probe: one exposure + one conversion for a doctor-canary identity
-            in an environment you name, after you confirm
+  verify    re-run check; report patch, pipeline and experiment status separately
+  canary    active ingestion probe: one exposure + one conversion for a doctor-canary
+            identity, only in an allowlisted environment you name, after you confirm
 
 Run experiment-doctor <command> --help for options.
 Agents: add --json for compact machine output.`;
