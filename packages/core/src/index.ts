@@ -32,4 +32,4 @@ export {
 export { redactSecrets, redactDeep, maskKey } from './util/redact';
 export { compareNames, levenshtein, slugify } from './util/strings';
 export { parseRange, parseVersion, compareVersions } from './util/semver';
-export { eventsEndpoint, isCloudUrl, selfHostedEventsUrl, stringLiteral, originOf, hostOf } from './util/urls';
+export { eventsEndpoint, ensureTrailingSlash, isCloudUrl, selfHostedEventsUrl, stringLiteral, originOf, hostOf } from './util/urls';
