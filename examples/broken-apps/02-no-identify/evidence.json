@@ -175,6 +175,9 @@
         },
         "kind": "unload-handler"
       }
+    ],
+    "appRoots": [
+      ""
     ]
   }
 }

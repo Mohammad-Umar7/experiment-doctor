@@ -184,6 +184,9 @@
         },
         "kind": "unload-handler"
       }
+    ],
+    "appRoots": [
+      ""
     ]
   }
 }
