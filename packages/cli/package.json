@@ -1,6 +1,6 @@
 {
   "name": "experiment-doctor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Find out why your Flagsmith experiment is flatlining. Diagnose, fix with approval, and verify.",
   "license": "MIT",
   "type": "module",

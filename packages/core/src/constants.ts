@@ -1,7 +1,7 @@
 /** Facts from the Flagsmith docs and source that the rules depend on. */
 
 export const TOOL_NAME = 'experiment-doctor' as const;
-export const TOOL_VERSION = '0.1.0';
+export const TOOL_VERSION = '0.2.0';
 
 export const DOCS = {
   runExperiment: 'https://docs.flagsmith.com/experimentation/run-an-experiment',

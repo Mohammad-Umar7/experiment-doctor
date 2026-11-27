@@ -1,6 +1,6 @@
 {
   "name": "@experiment-doctor/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Diagnosis rules, evidence model and known-bug registry for Experiment Doctor.",
   "license": "MIT",
   "type": "module",
