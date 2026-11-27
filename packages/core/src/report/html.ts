@@ -144,7 +144,8 @@ export function renderHtmlReport(input: Report, opts: { knownSecrets?: string[] 
   const v = VERDICT[report.verdict];
   const t = report.target;
   const title = [t.flag, t.experimentName && `“${t.experimentName}”`, t.environment && `in ${t.environment}`].filter(Boolean).join(' ');
-  const others = report.findings.filter((f) => f !== report.primaryFinding && f.id !== report.primaryFinding?.id);
+  // primaryFinding is always findings[0]
+  const others = report.findings.slice(report.primaryFinding ? 1 : 0);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
 <title>Experiment Doctor report${t.flag ? ` · ${esc(t.flag)}` : ''}</title><style>${CSS}</style></head>

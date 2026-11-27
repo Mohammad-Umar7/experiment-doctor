@@ -43,7 +43,7 @@ export function toAgentSummary(report: Report): AgentSummary {
     summary: report.summary,
     pipeline,
     primary: report.primaryFinding,
-    others: report.findings.filter((f) => f !== report.primaryFinding).map((f) => ({ id: f.id, severity: f.severity, title: f.title })),
+    others: report.findings.slice(report.primaryFinding ? 1 : 0).map((f) => ({ id: f.id, severity: f.severity, title: f.title })),
     upstream: report.upstream.map((u) => ({ issue: u.issue, title: u.title, url: u.url, workaround: u.workaround })),
     checks: { pass: count('pass'), fail: count('fail'), skip: count('skip'), pending: count('pending') },
     next: nextStep(report),
