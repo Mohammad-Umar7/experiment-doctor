@@ -1,0 +1,106 @@
+[
+  {
+    "id": "01-missing-variant-key",
+    "title": "Variation without a key",
+    "expected": "ED-001",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "01-missing-variant-key/README.md",
+    "evidence": "01-missing-variant-key/evidence.json"
+  },
+  {
+    "id": "02-no-identify",
+    "title": "Experiment flag read before identify",
+    "expected": "ED-002",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "02-no-identify/README.md",
+    "evidence": "02-no-identify/evidence.json"
+  },
+  {
+    "id": "03-identity-mismatch",
+    "title": "Exposure and conversion identity mismatch",
+    "expected": "ED-003",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "03-identity-mismatch/README.md",
+    "evidence": "03-identity-mismatch/evidence.json"
+  },
+  {
+    "id": "04-event-name-case",
+    "title": "Metric event name differs in case",
+    "expected": "ED-004",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "04-event-name-case/README.md",
+    "evidence": "04-event-name-case/evidence.json"
+  },
+  {
+    "id": "05-unflushed-script",
+    "title": "Script exits before events are flushed",
+    "expected": "ED-005",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "05-unflushed-script/README.md",
+    "evidence": "05-unflushed-script/evidence.json"
+  },
+  {
+    "id": "06-wrong-events-endpoint",
+    "title": "Self-hosted API, Cloud events URL",
+    "expected": "ED-006",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "06-wrong-events-endpoint/README.md",
+    "evidence": "06-wrong-events-endpoint/evidence.json"
+  },
+  {
+    "id": "07-no-warehouse",
+    "title": "No warehouse connected",
+    "expected": "ED-007",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "07-no-warehouse/README.md",
+    "evidence": "07-no-warehouse/evidence.json"
+  },
+  {
+    "id": "08-experiment-draft",
+    "title": "Experiment created but never started",
+    "expected": "ED-008",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "08-experiment-draft/README.md",
+    "evidence": "08-experiment-draft/evidence.json"
+  },
+  {
+    "id": "09-events-disabled",
+    "title": "enableEvents missing (enableAnalytics instead)",
+    "expected": "ED-009",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "09-events-disabled/README.md",
+    "evidence": "09-events-disabled/evidence.json"
+  },
+  {
+    "id": "10-old-sdk",
+    "title": "SDK too old for experiments",
+    "expected": "ED-010",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "10-old-sdk/README.md",
+    "evidence": "10-old-sdk/evidence.json"
+  },
+  {
+    "id": "11-plain-flag-read",
+    "title": "getValue instead of getExperimentFlag",
+    "expected": "ED-011",
+    "verdict": "REPAIR_REQUIRED",
+    "readme": "11-plain-flag-read/README.md",
+    "evidence": "11-plain-flag-read/evidence.json"
+  },
+  {
+    "id": "12-collecting-data",
+    "title": "Healthy, still collecting data",
+    "expected": "ED-012",
+    "verdict": "PENDING",
+    "readme": "12-collecting-data/README.md",
+    "evidence": "12-collecting-data/evidence.json"
+  },
+  {
+    "id": "healthy",
+    "title": "Healthy experiment",
+    "expected": null,
+    "verdict": "HEALTHY",
+    "readme": "healthy/README.md",
+    "evidence": "healthy/evidence.json"
+  }
+]
