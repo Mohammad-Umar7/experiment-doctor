@@ -73,7 +73,7 @@ export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun
     evidence = loadEvidence(evidencePath);
     if (opts.dir) {
       evidence.code = scanFiles(readSourceFiles(root));
-      notes.push(`Loaded Flagsmith evidence from ${toPosix(relative(io.cwd, evidencePath)) || evidencePath}; code rescanned from ${toPosix(relative(io.cwd, root)) || '.'}.`);
+      notes.push(`Loaded Flagsmith evidence from ${displayPath(io.cwd, evidencePath)}; code rescanned from ${displayPath(io.cwd, root) || '.'}.`);
     }
   } else {
     const collected = await collectConfig(io, { dir: root, flag: opts.flag, experimentId: opts.experiment, environment: opts.environment });
@@ -91,7 +91,7 @@ export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun
     if (opts.flag) evidence.target.flag = opts.flag;
     if (opts.experiment !== undefined) evidence.target.experimentId = opts.experiment;
   }
-  if (evidence.code && evidence.code.scannedFiles === 0) notes.push(`No JS/TS files found in ${toPosix(relative(io.cwd, root)) || '.'}; code checks were skipped.`);
+  if (evidence.code && evidence.code.scannedFiles === 0) notes.push(`No JS/TS files found in ${displayPath(io.cwd, root) || '.'}; code checks were skipped.`);
 
   const report = diagnose(evidence, { now: io.now().toISOString() });
   const run: CheckRun = { report, evidence, notes, root };
