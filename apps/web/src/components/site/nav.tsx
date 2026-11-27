@@ -60,7 +60,7 @@ export function Nav() {
           >
             GitHub
           </a>
-          <ButtonLink href="/play" size="sm" className="hidden sm:inline-flex">
+          <ButtonLink href="/play" size="sm" className="max-sm:hidden">
             Challenge the Doctor
           </ButtonLink>
           <button
