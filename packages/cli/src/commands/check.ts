@@ -101,6 +101,15 @@ export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun
   if (evidence.code && evidence.code.scannedFiles === 0) notes.push(`No JS/TS files found in ${displayPath(io.cwd, root) || '.'}; code checks were skipped.`);
 
   const report = diagnose(evidence, { now: io.now().toISOString() });
+  const skipped = evidence.code?.skipped ?? [];
+  if (skipped.length) {
+    const tests = skipped.filter((s) => s.reason === 'test').length;
+    const bundles = skipped.length - tests;
+    notes.push(`Skipped ${skipped.length} file(s) that are not app code: ${[tests && `${tests} test/fixture`, bundles && `${bundles} bundled, minified or SDK copy`].filter(Boolean).join(', ')}.`);
+  }
+  if (report.target.app && report.target.otherApps?.length) {
+    notes.push(`Monorepo: diagnosed only ${report.target.app}; never mixed with ${report.target.otherApps.join(', ')}. Run check --dir <app> for each other app.`);
+  }
   const run: CheckRun = { report, evidence, notes, root };
   if (envKey) run.envKey = envKey;
 

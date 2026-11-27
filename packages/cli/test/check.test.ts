@@ -90,3 +90,24 @@ describe('check', () => {
     expect(io.err()).toMatch(/Unknown option/);
   });
 });
+
+describe('check on a monorepo with tests and bundles', () => {
+  it('explains what was skipped and which app was diagnosed', async () => {
+    const app = APP_FILES['src/flags.ts']!.replace("'Purchase'", "'purchase'");
+    const dir = tempDir({
+      'package.json': JSON.stringify({ name: 'root', private: true }),
+      'apps/shop/package.json': APP_FILES['package.json']!,
+      'apps/shop/src/flags.ts': app,
+      'apps/admin/package.json': APP_FILES['package.json']!,
+      'apps/admin/src/flags.ts': app.replace('user.id', 'currentAdmin()'),
+      'apps/shop/test/flags.test.ts': "import flagsmith from '@flagsmith/flagsmith';\nawait flagsmith.init({ environmentID: 'x' });",
+      'apps/shop/public/sdk.js': 'var x=1;',
+    });
+    const io = fakeIo({ cwd: dir, flagsmith: null });
+    await main(['check', '--json', '--no-save'], io);
+    const out = JSON.parse(io.out());
+    expect(out.verdict).not.toBe('REPAIR_REQUIRED');
+    expect(out.notes.join(' ')).toMatch(/Skipped 2 file\(s\) that are not app code: 1 test\/fixture, 1 bundled/);
+    expect(out.notes.join(' ')).toMatch(/Monorepo: diagnosed only apps\/(admin|shop); never mixed with apps\/(admin|shop)/);
+  });
+});
