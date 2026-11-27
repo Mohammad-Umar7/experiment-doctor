@@ -54,7 +54,7 @@ Three of these deserve a closer look:
 
 ## What this does and does not show
 
-- It shows **precision on code-level rules**: real code that the Doctor should leave alone no longer gets a repair-required verdict.
+- It shows **fewer false alarms on these 8 repositories**: real code that the Doctor should leave alone no longer gets a repair-required verdict. We fixed the scanner and then reran the same 8. That makes it a regression check, not a precision estimate for code the Doctor has not seen.
 - It does **not** show recall. We do not know whether these experiments are actually healthy, because their Flagsmith side was out of reach. Recall is measured on the 13 example apps (`node bench/accuracy.mjs`, 13/13) and in the agent benchmark ([`bench/BENCHMARK.md`](../bench/BENCHMARK.md)).
 - 8 repositories is a small sample, and most are recent hackathon-sized codebases. We will rerun the audit as more public code adopts Experimentation.
 
