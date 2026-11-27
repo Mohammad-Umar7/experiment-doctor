@@ -22,6 +22,8 @@ export interface RuleContext {
   metrics: MetricEvidence[] | undefined;
   /** When the evidence was collected (keeps diagnose deterministic). */
   now: Date | null;
+  /** Set in monorepos: the one app the code evidence was scoped to. */
+  app?: { path: string; otherApps: string[]; reason: string };
 }
 
 export interface RuleOutcome {

@@ -57,6 +57,10 @@ export function diagnose(evidence: Evidence, options: DiagnoseOptions = {}): Rep
   if (expId !== undefined) target.experimentId = expId;
   if (exp?.name) target.experimentName = exp.name;
   if (evidence.config?.environment?.name) target.environment = evidence.config.environment.name;
+  if (ctx.app) {
+    target.app = ctx.app.path || '.';
+    if (ctx.app.otherApps.length) target.otherApps = ctx.app.otherApps.map((a) => a || '.');
+  }
 
   return {
     schemaVersion: 1,
