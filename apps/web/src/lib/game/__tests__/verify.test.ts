@@ -87,3 +87,45 @@ window.addEventListener("pagehide", () => flagsmith.flushEvents());`;
     expect(result.brokenStage).toBe("app");
   });
 });
+
+describe("verifyRepair ignores code that never runs", () => {
+  const base = CASES[0].code; // the conversion is sent as "Purchase"
+
+  it("does not count a conversion inside if (false)", () => {
+    const code = base.replace('flagsmith.trackEvent("Purchase");', 'if (false) { flagsmith.trackEvent("purchase"); }');
+    expect(verifyRepair(code, target).ok).toBe(false);
+  });
+
+  it("does not count a conversion behind false &&", () => {
+    const code = base.replace('flagsmith.trackEvent("Purchase");', 'false && flagsmith.trackEvent("purchase");');
+    expect(verifyRepair(code, target).ok).toBe(false);
+  });
+
+  it("does not count a conversion in a function nobody calls", () => {
+    const code = base + '\nfunction neverCalled() {\n  flagsmith.trackEvent("purchase");\n}\n';
+    expect(verifyRepair(code, target).ok).toBe(false);
+  });
+
+  it("does not count a conversion in an arrow function nobody calls", () => {
+    const code = base + '\nconst neverCalled = () => flagsmith.trackEvent("purchase");\n';
+    expect(verifyRepair(code, target).ok).toBe(false);
+  });
+
+  it("still counts a named handler that is passed to the purchase hook", () => {
+    const code = base.replace(
+      `onPurchaseComplete(() => {
+  flagsmith.trackEvent("Purchase");
+});`,
+      `function onPurchase() {
+  flagsmith.trackEvent("purchase");
+}
+onPurchaseComplete(onPurchase);`,
+    );
+    expect(verifyRepair(code, target).ok).toBe(true);
+  });
+
+  it("still runs the taken branch of if (true)", () => {
+    const code = base.replace('flagsmith.trackEvent("Purchase");', 'if (true) { flagsmith.trackEvent("purchase"); }');
+    expect(verifyRepair(code, target).ok).toBe(true);
+  });
+});
