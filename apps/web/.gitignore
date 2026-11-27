@@ -42,3 +42,5 @@ next-env.d.ts
 
 # example env file is documentation, keep it
 !.env.example
+
+.vercel
