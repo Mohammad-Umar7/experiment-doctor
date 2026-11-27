@@ -39,6 +39,7 @@ function pct(v: number | null | undefined, digits = 0) {
 
 function ago(iso: string | null, now: number) {
   if (!iso) return "never";
+  if (!now) return "just now";
   const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (s < 60) return `${s}s ago`;
   const m = Math.round(s / 60);
@@ -48,7 +49,8 @@ function ago(iso: string | null, now: number) {
 export function RescueClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [results, setResults] = useState<ExperimentResults | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  // Set on mount: reading the clock during prerender would freeze it into the static shell.
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -62,6 +64,7 @@ export function RescueClient() {
       if (r) setResults(r);
     }
     void load();
+    setNow(Date.now());
     const iv = setInterval(() => {
       if (document.visibilityState === "visible") void load();
     }, 15_000);
