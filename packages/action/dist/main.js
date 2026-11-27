@@ -888,7 +888,7 @@ function serverlessFinding(rule, p, client, isNode) {
   return makeFinding(rule, {
     severity: "critical",
     title: "The function returns before buffered events are sent",
-    detail: "Serverless functions and route handlers can be frozen or stopped as soon as they respond. The SDK sends events on a 10 second timer, so events tracked in the request are usually lost.",
+    detail: "Serverless functions and route handlers can be frozen or stopped as soon as they respond. The SDK sends events on a timer (every 10 seconds unless flushInterval is set), so events tracked in the request are usually lost.",
     evidence: [codeItem("Events are produced in a request handler with no flush", p.loc)],
     fix: {
       summary: `Await \`${client}.flushEvents()\` before returning the response.`,
@@ -902,7 +902,7 @@ function serverFinding(rule, p, client) {
   return makeFinding(rule, {
     severity: "warning",
     title: "Events buffered at shutdown are lost",
-    detail: "A long-running server flushes every 10 seconds, but a deploy or restart drops whatever is still buffered. Close the client on SIGTERM so the last batch is sent.",
+    detail: "A long-running server flushes on a timer (every 10 seconds unless flushInterval is set), but a deploy or restart drops whatever is still buffered. Close the client on SIGTERM so the last batch is sent.",
     evidence: [codeItem("Events are produced by a server process with no shutdown flush", p.loc)],
     fix: {
       summary: `Call \`await ${client}.close()\` in a SIGTERM handler.`,
@@ -916,7 +916,7 @@ function browserFinding(rule, p, client) {
   return makeFinding(rule, {
     severity: "info",
     title: "Events tracked just before the page closes can be lost",
-    detail: "The browser SDK sends events every 10 seconds. A conversion tracked right before navigation (for example a redirect to a payment page) may never be sent. Flush on pagehide to keep it.",
+    detail: "The browser SDK sends events on a timer (every 10 seconds unless flushInterval is set). A conversion tracked right before navigation (for example a redirect to a payment page) may never be sent. Flush on pagehide to keep it.",
     evidence: [codeItem("Events are produced in the browser; no flushEvents() found", p.loc)],
     fix: {
       summary: `Flush on pagehide: \`window.addEventListener('pagehide', () => ${client}.flushEvents())\`.`,
