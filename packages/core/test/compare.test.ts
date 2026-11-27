@@ -83,3 +83,39 @@ describe('toAgentSummary', () => {
     expect(s.checks.fail).toBe(1);
   });
 });
+
+describe('pipeline evidence binding', () => {
+  const ctx = { envFingerprint: 'fnv1a:00000001', experimentId: 42, flag: 'checkout_button', events: ['purchase'], since: '2026-11-28T10:00:00.000Z', sinceReason: 'repair' as const };
+  const binding = { envFingerprint: 'fnv1a:00000001', experimentId: 42, flag: 'checkout_button', event: 'purchase' };
+  const verified = { status: 'IDENTITY_VERIFIED' as const, at: '2026-11-28T10:01:00.000Z', evidenceAt: '2026-11-28T10:00:30.000Z', identity: 'u1', identityLevel: true, scope: 'app-sdk' as const, binding };
+  const run = (probe: Parameters<typeof compareReports>[2]) => compareReports(broken(), diagnose(healthyEvidence()), probe, ctx).pipeline;
+
+  it('verifies bound evidence newer than the repair', () => {
+    expect(run(verified).status).toBe('PIPELINE_VERIFIED');
+  });
+
+  it('rejects evidence older than the repair, even for the same identity', () => {
+    const p = run({ ...verified, evidenceAt: '2026-11-28T09:59:59.000Z' });
+    expect(p.status).toBe('PIPELINE_UNVERIFIED');
+    expect(p.message).toMatch(/older than the repair/);
+  });
+
+  it('rejects evidence for another environment, experiment, flag or event', () => {
+    expect(run({ ...verified, binding: { ...binding, envFingerprint: 'fnv1a:ffffffff' } }).message).toMatch(/different environment/);
+    expect(run({ ...verified, binding: { ...binding, experimentId: 7 } }).message).toMatch(/experiment 7, not 42/);
+    expect(run({ ...verified, binding: { ...binding, flag: 'other' } }).message).toMatch(/flag "other"/);
+    expect(run({ ...verified, binding: { ...binding, event: 'signup' } }).message).toMatch(/event "signup"/);
+    const { binding: _b, ...unbound } = verified;
+    expect(run(unbound).status).toBe('PIPELINE_UNVERIFIED');
+  });
+
+  it('refuses to bind when the current environment is unknown', () => {
+    const p = compareReports(broken(), diagnose(healthyEvidence()), verified, { ...ctx, envFingerprint: undefined }).pipeline;
+    expect(p.message).toMatch(/environment key is unknown/);
+  });
+
+  it('reports unreadable evidence as unverified with its reason', () => {
+    const p = run({ status: 'UNAVAILABLE', at: '2026-11-28T10:01:00.000Z', identity: 'u1', identityLevel: false, detail: 'docker is not installed' });
+    expect(p).toMatchObject({ status: 'PIPELINE_UNVERIFIED', message: 'Not verified: docker is not installed.' });
+  });
+});
