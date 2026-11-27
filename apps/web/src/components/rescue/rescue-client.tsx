@@ -115,7 +115,7 @@ export function RescueClient() {
         </Kpi>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* A/B */}
         <Panel className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
