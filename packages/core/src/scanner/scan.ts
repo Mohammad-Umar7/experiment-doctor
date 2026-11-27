@@ -10,6 +10,7 @@ import type {
   InitEvidence,
   PlainFlagReadEvidence,
   SdkPackageEvidence,
+  SkippedFile,
   SourceLocation,
   TrackEventEvidence,
 } from '../types';
@@ -36,6 +37,24 @@ const CODE_EXT = /\.(?:[mc]?[jt]sx?)$/i;
 const IGNORED = /(^|\/)(node_modules|dist|build|out|coverage|\.next|\.git|\.turbo|\.vercel|\.experiment-doctor)\//;
 const MCP_FILES = /(^|\/)(\.mcp\.json|mcp\.json|claude_desktop_config\.json|\.cursor\/mcp\.json|\.vscode\/mcp\.json)$/;
 const MAX_FILE_BYTES = 750_000;
+
+/** Test and fixture code is not the app: never evidence. */
+const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|tests?|e2e|fixtures?|cypress|playwright)\/|\.(test|spec|e2e)\.[mc]?[jt]sx?$/i;
+/** Served or vendored bundles (often a copy of the SDK itself). */
+const BUNDLE_DIR = /(^|\/)(public|vendor|vendors|dist|build|out|static\/js)\//i;
+const BUNDLE_NAME = /\.(min|bundle|umd|prod)\.[mc]?js$/i;
+/** Strings only the Flagsmith SDK's own source contains. */
+const SDK_SOURCE = /eventProcessorConfig requires enableEvents|ValueError: enableEvents must be true|this\.getExperimentFlag\s*=\s*function|FLAG_EXPOSURE_EVENT\s*=\s*['"]\$flag_exposure['"]|class EventProcessor\b[\s\S]{0,2000}trackExposureEvent/;
+
+export function skipReason(path: string, content: string): SkippedFile['reason'] | null {
+  if (TEST_PATH.test(path)) return 'test';
+  if (BUNDLE_NAME.test(path) || BUNDLE_DIR.test(path) || content.length > MAX_FILE_BYTES) return 'bundle';
+  const lines = content.split('\n');
+  const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+  if (longest > 2000 || content.length / Math.max(1, lines.length) > 500) return 'minified';
+  if (SDK_SOURCE.test(content)) return 'sdk-copy';
+  return null;
+}
 
 const JS_PACKAGES = ['@flagsmith/flagsmith', 'flagsmith', 'react-native-flagsmith'];
 const NODE_PACKAGES = ['@flagsmith/nodejs', 'flagsmith-nodejs'];
@@ -280,23 +299,37 @@ function resolveName(ctx: FileCtx, global: Map<string, string>, raw: string): st
   return ctx.consts.get(id) ?? global.get(id) ?? null;
 }
 
+/** SDK options the scanner cannot see (a parameter, a helper call): every option is unknown. */
+function opaqueInit(ctx: FileCtx, sdk: Sdk, style: InitEvidence['style'], callOffset: number, client?: string): InitEvidence {
+  const init: InitEvidence = { loc: makeLoc(ctx, callOffset), sdk, style, enableEvents: null, apiUrl: null, eventsApiUrl: null, hasEventProcessorConfig: false, opaque: true };
+  if (client) init.client = client;
+  return init;
+}
+
 function initFromObject(ctx: FileCtx, open: number, sdk: Sdk, style: InitEvidence['style'], callOffset: number, client?: string): InitEvidence | null {
   const obj = parseObject(ctx.code, ctx.skel, open);
   if (!obj) return null;
-  const get = (k: string) => obj.props.find((p) => p.key === k);
+  // A spread can set any option, so a property is only known when it comes after every spread.
+  const lastSpread = obj.spreads.length ? Math.max(...obj.spreads) : -1;
+  let opaque = obj.spreads.length > 0;
+  const get = (k: string) => obj.props.find((p) => p.key === k && p.index > lastSpread);
   const looksLikeFlagsmith = obj.props.some((p) => /^(environmentID|environmentKey|enableEvents|eventProcessorConfig|api|apiUrl|identity)$/.test(p.key));
-  if (!looksLikeFlagsmith && style === 'init') return null;
+  if (!looksLikeFlagsmith && !opaque && style === 'init') return null;
   const api = sdk === 'node' ? get('apiUrl') ?? get('api') : get('api') ?? get('apiUrl');
   const epc = get('eventProcessorConfig');
   let eventsApiUrl: string | null = null;
   let eventsApiUrlLoc: SourceLocation | undefined;
   if (epc && epc.value.startsWith('{')) {
     const inner = parseObject(ctx.code, ctx.skel, epc.valueOffset);
-    const ev = inner?.props.find((p) => p.key === 'eventsApiUrl');
+    const innerLast = inner?.spreads.length ? Math.max(...inner.spreads) : -1;
+    if (inner?.spreads.length) opaque = true;
+    const ev = inner?.props.find((p) => p.key === 'eventsApiUrl' && p.index > innerLast);
     if (ev) {
       eventsApiUrl = ev.value;
       eventsApiUrlLoc = makeLoc(ctx, ev.keyOffset);
     }
+  } else if (epc) {
+    opaque = true; // eventProcessorConfig: someVariable
   }
   const openLine = ctx.lines.lineOf(open);
   const closeLine = ctx.lines.lineOf(obj.close);
@@ -325,6 +358,7 @@ function initFromObject(ctx: FileCtx, open: number, sdk: Sdk, style: InitEvidenc
   if (identity) init.identityExpr = normaliseExpr(identity.value);
   if (openLine !== closeLine) init.insertAfter = makeLoc(ctx, open);
   if (client) init.client = client;
+  if (opaque) init.opaque = true;
   return init;
 }
 
@@ -429,7 +463,11 @@ function collectCalls(ctx: FileCtx, global: Map<string, string>, out: Collected,
           const m = new RegExp(`\\b(?:const|let|var)\\s+${a0.replace(/\$/g, '\\$')}\\s*(?::[^=]+)?=\\s*\\{`).exec(skel);
           if (m) open = m.index + m[0].length - 1;
         }
-        if (open < 0) return;
+        if (open < 0) {
+          // options built elsewhere (a parameter, a helper call): unknown, not missing
+          out.inits.push(opaqueInit(ctx, sdkFor(name, 'js'), 'init', recvStart, client));
+          return;
+        }
         const init = initFromObject(ctx, open, sdkFor(name, 'js'), 'init', recvStart, client);
         if (init) {
           out.inits.push(init);
@@ -488,8 +526,12 @@ function collectCalls(ctx: FileCtx, global: Map<string, string>, out: Collected,
       const mm = new RegExp(`\\b(?:const|let|var)\\s+${a0.replace(/\$/g, '\\$')}\\s*(?::[^=]+)?=\\s*\\{`).exec(skel);
       if (mm) objOpen = mm.index + mm[0].length - 1;
     }
-    if (objOpen < 0) continue;
     const lhs = /([A-Za-z_$][\w$]*)\s*(?::\s*[\w<>.[\]| ]+)?=\s*$/.exec(skel.slice(Math.max(0, m.index! - 80), m.index!));
+    if (objOpen < 0) {
+      // new Flagsmith(flagsmithConfig(...)) or new Flagsmith(options): unknown, not missing
+      out.inits.push(opaqueInit(ctx, 'node', 'constructor', m.index!, lhs?.[1]));
+      continue;
+    }
     const init = initFromObject(ctx, objOpen, 'node', 'constructor', m.index!, lhs?.[1]);
     if (init) out.inits.push(init);
   }
@@ -509,7 +551,10 @@ function collectCalls(ctx: FileCtx, global: Map<string, string>, out: Collected,
         if (mm) objOpen = mm.index + mm[0].length - 1;
       }
     }
-    if (objOpen < 0) continue;
+    if (objOpen < 0) {
+      out.inits.push(opaqueInit(ctx, 'js', 'provider', m.index!));
+      continue;
+    }
     const init = initFromObject(ctx, objOpen, 'js', 'provider', m.index!);
     if (init) {
       out.inits.push(init);
@@ -554,6 +599,8 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
   const files = input.map((f) => ({ path: f.path.replace(/\\/g, '/').replace(/^\.\//, ''), content: f.content }));
   const packages: SdkPackageEvidence[] = [];
   const installed: { name: string; version: string; root: string }[] = [];
+  const appRoots = new Set<string>();
+  const skipped: SkippedFile[] = [];
   let usesFlagsmithMcp = false;
 
   for (const f of files) {
@@ -562,8 +609,11 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
       if (inst) installed.push(inst);
       continue;
     }
-    if (IGNORED.test(f.path)) continue;
-    if (/(^|\/)package\.json$/.test(f.path)) packages.push(...readManifest(f.path, f.content));
+    if (IGNORED.test(f.path) || TEST_PATH.test(f.path) || BUNDLE_DIR.test(f.path)) continue;
+    if (/(^|\/)package\.json$/.test(f.path)) {
+      packages.push(...readManifest(f.path, f.content));
+      appRoots.add(f.path.replace(/(^|\/)package\.json$/, ''));
+    }
     if (MCP_FILES.test(f.path) && /flagsmith/i.test(f.content)) usesFlagsmithMcp = true;
   }
   for (const p of packages) {
@@ -575,7 +625,11 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
   const ctxs: FileCtx[] = [];
   for (const f of files) {
     if (!CODE_EXT.test(f.path) || IGNORED.test(f.path) || /\.d\.ts$/.test(f.path)) continue;
-    if (f.content.length > MAX_FILE_BYTES) continue;
+    const notAppCode = skipReason(f.path, f.content);
+    if (notAppCode) {
+      skipped.push({ file: f.path, reason: notAppCode });
+      continue;
+    }
     const { code, skeleton } = lex(f.content);
     const ctx: FileCtx = {
       path: f.path,
@@ -670,6 +724,8 @@ export function scanFiles(input: SourceFile[], options: ScanOptions = {}): CodeE
   if (options.root) evidence.root = options.root;
   if (usesFlagsmithMcp) evidence.usesFlagsmithMcp = true;
   if (out.experimentUpdates.length) evidence.experimentUpdates = out.experimentUpdates.sort(byLoc);
+  if (appRoots.size) evidence.appRoots = [...appRoots].sort();
+  if (skipped.length) evidence.skipped = skipped.sort((a, b) => a.file.localeCompare(b.file));
   return evidence;
 }
 
