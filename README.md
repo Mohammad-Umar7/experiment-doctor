@@ -15,6 +15,15 @@ and a game that is itself a live Flagsmith experiment.
 
 ---
 
+## For judges: the evidence, per track
+
+| Track | Look at this |
+| --- | --- |
+| **T1 Test Something Real** | The live experiment and its results: [Rescue Center](https://experimentdoctor.vercel.app/rescue) (Flagsmith inference, reconciliation with our server, timeline). Design and stopping rule: [The A/B test](#the-ab-test-track-1). Play it: [/play](https://experimentdoctor.vercel.app/play). |
+| **T2 AI Agents and Feature Flags** | The CI Gate failing a real PR: [#1](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1), and passing a harmless one: [#2](https://github.com/Mohammad-Umar7/experiment-doctor/pull/2). The CLI's approval gates and fail-closed allowlist: [docs/cli.md](docs/cli.md). The Doctor finding three real bugs in a self-hosted experiment, one of them a mistake in our own seed script: [selfhost/](selfhost). |
+| **T3 Build on Open Source Flagsmith** | One-command self-hosted lab with Experimentation and per-identity verification from Flagsmith's own Postgres event store: [selfhost/](selfhost) and [Self-hosted rescue lab](#self-hosted-rescue-lab). |
+| **T4 Flagsmith Agent Skills** | The skill: [skills/flagsmith-experiment-doctor](skills/flagsmith-experiment-doctor). Benchmark against plain Claude Code, losses included: [bench/BENCHMARK.md](bench/BENCHMARK.md). |
+
 ## The problem
 
 Flagsmith Experimentation fails **silently**. The SDKs skip events instead of throwing, so a single wrong detail leaves an experiment at zero conversions with no error anywhere:
@@ -34,7 +43,7 @@ During this hackathon thousands of developers are wiring up Experimentation (bet
 | **`experiment-doctor` CLI** (`packages/cli`) | `check` reads your experiment through the official **Flagsmith CLI v2** (`flagsmith api ... --json`) and scans your code; `fix` shows one diff and asks y/N; `canary` sends an opt-in probe; `verify` re-checks and reports patch, pipeline and experiment health separately. Read-only by default, mutations only for allowlisted environments. | T2 |
 | **Diagnosis engine** (`packages/core`) | Pure TypeScript: evidence model, a JS/TS scanner that follows imports and SDK bindings, 12 rules (`ED-001` to `ED-012`), a curated registry of known Flagsmith Experimentation bugs, report rendering. Runs in Node, in CI and in the browser. | T2, T4 |
 | **Agent Skill** (`skills/flagsmith-experiment-doctor`) | Takes any coding agent through the whole job: diagnose, explain one root cause, propose the patch, get approval, apply, verify. Token-efficient `--json` output. | T4 |
-| **CI Gate** (`action.yml`, `packages/action`) | GitHub Action that diffs the experiment wiring between the base and the PR, annotates the exact line and blocks only regressions the PR introduces. No secrets. | T2 |
+| **CI Gate** (`action.yml`, `packages/action`) | GitHub Action that diffs the experiment wiring between the base and the PR, annotates the exact line and fails the check only for regressions the PR introduces (make it a required check to block merges). No secrets. | T2 |
 | **Self-hosted rescue lab** (`selfhost/`) | Self-hosted Flagsmith with Experimentation on and events stored in its own Postgres, seeded with a broken experiment, real SDK traffic, and **per-identity pipeline verification**. | T3 |
 | **Human vs Doctor** (`apps/web`) | A public game: fix a broken experiment in 3 minutes and race the Doctor. The hint you get is decided by a **live Flagsmith experiment**. | T1 |
 | **Rescue Center** (`/rescue`) | Live results of that experiment: our server counts, Flagsmith's Bayesian inference, reconciliation between the two, and the Doctor checking our own experiment. | T1 |
@@ -88,7 +97,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { fetch-depth: 0 }
-      - uses: Mohammad-Umar7/experiment-doctor@main
+      - uses: Mohammad-Umar7/experiment-doctor@v0.1.0
 ```
 
 Describe your experiment in `.experiment-doctor.json`:
