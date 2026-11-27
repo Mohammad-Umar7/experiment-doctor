@@ -78,7 +78,7 @@ export function evaluateIdentityEvents(identity: string, rows: StoredEvent[], op
       status: 'PENDING',
       problems: [],
       message: stale
-        ? `${stale} event(s) stored for ${identity} are older than ${opts.since}, so they do not prove the repair. Waiting for new ones.`
+        ? `${stale} event(s) stored for ${identity} are older than ${opts.since}, so they do not count. Waiting for new ones.`
         : `Nothing stored for ${identity} yet. Events are buffered by the SDK; try again in a few seconds.`,
     };
   }
