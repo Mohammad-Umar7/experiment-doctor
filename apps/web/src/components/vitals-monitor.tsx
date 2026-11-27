@@ -153,7 +153,7 @@ export function VitalsMonitor({ className }: { className?: string }) {
           {phase === "flatline" && (
             <ConsoleBlock key="flat">
               <p className="text-fg-muted">$ npx experiment-doctor check</p>
-              <p className="text-critical">248 exposures, 0 conversions. Something is broken.</p>
+              <p className="text-critical">{exposures} exposures, 0 conversions. Something is broken.</p>
             </ConsoleBlock>
           )}
           {phase === "scanning" && (
