@@ -23,7 +23,7 @@ export type RawResultsBody = {
   } | null;
 };
 /** The endpoint wraps the body as `{ results: {...} }`; older snapshots may be unwrapped. */
-export type RawResults = (RawResultsBody & { results?: RawResultsBody }) | null;
+export type RawResults = (RawResultsBody & { results?: RawResultsBody | null }) | null;
 
 export type VariantResult = { key: string; exposed: number; converted: number; rate: number | null };
 

@@ -17,7 +17,7 @@ export async function getExperimentResults(): Promise<ExperimentResults> {
   const api = (process.env.FLAGSMITH_API_URL ?? "https://api.flagsmith.com").replace(/\/$/, "");
 
   if (!key || !env || !id) {
-    const raw = (snapshot as { results?: RawResults }).results ?? null;
+    const raw = (snapshot as unknown as { results?: RawResults }).results ?? null;
     return raw ? normaliseResults(raw, "snapshot") : EMPTY_RESULTS;
   }
 
