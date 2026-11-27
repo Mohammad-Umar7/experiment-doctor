@@ -9,8 +9,8 @@ pnpm --filter @experiment-doctor/core build
 pnpm --filter experiment-doctor build          # dist/cli.js, core bundled in
 node packages/cli/dist/cli.js --help
 
-pnpm --filter experiment-doctor pack           # experiment-doctor-0.1.0.tgz, no runtime dependencies
-npx ./experiment-doctor-0.1.0.tgz check        # from any folder
+pnpm --filter experiment-doctor pack           # experiment-doctor-0.2.0.tgz, no runtime dependencies
+npx ./experiment-doctor-0.2.0.tgz check        # from any folder
 ```
 
 Live config checks use the official [Flagsmith CLI v2](https://github.com/Flagsmith/flagsmith-cli) (`flagsmith login`, then `flagsmith init` in your app to write `flagsmith.json`). Without it, `check` still runs the code rules and marks the Flagsmith side `unknown`.
