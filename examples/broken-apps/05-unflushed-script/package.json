@@ -1,0 +1,9 @@
+{
+  "name": "traffic-sim",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@flagsmith/nodejs": "^9.5.0",
+    "tsx": "^4.20.0"
+  }
+}

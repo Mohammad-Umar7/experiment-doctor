@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-11-27T10:00:00.000Z",
+  "target": {
+    "flag": "checkout_button",
+    "experimentId": 42
+  },
+  "config": {
+    "source": "file",
+    "environment": {
+      "name": "Staging",
+      "selfHosted": false
+    },
+    "experiment": {
+      "id": 42,
+      "name": "Green checkout button",
+      "status": "running",
+      "featureId": 7,
+      "featureName": "checkout_button",
+      "metricIds": [
+        3
+      ],
+      "startedAt": "2026-11-24T09:00:00Z",
+      "endedAt": null,
+      "rolloutDecision": null,
+      "rollout": {
+        "enabled": true,
+        "rolloutPercentage": 100
+      }
+    },
+    "flag": {
+      "id": 7,
+      "name": "checkout_button",
+      "type": "MULTIVARIATE",
+      "variants": [
+        {
+          "id": 11,
+          "value": "green",
+          "key": "green",
+          "weight": 50
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "id": 3,
+        "name": "Purchases",
+        "event": "purchase",
+        "aggregation": "occurrence",
+        "direction": "up"
+      }
+    ],
+    "warehouses": [
+      {
+        "id": 1,
+        "type": "flagsmith",
+        "status": "connected",
+        "statusDetail": null,
+        "totalEventsReceived": 0,
+        "lastEventAt": null
+      }
+    ],
+    "results": null
+  },
+  "code": {
+    "scannedFiles": 2,
+    "files": [
+      {
+        "file": "simulate.ts",
+        "runtime": "node-script",
+        "usesFlagsmith": true
+      }
+    ],
+    "packages": [
+      {
+        "name": "@flagsmith/nodejs",
+        "kind": "node",
+        "range": "^9.5.0",
+        "manifest": {
+          "file": "package.json",
+          "line": 6,
+          "snippet": "\"@flagsmith/nodejs\": \"^9.5.0\",",
+          "text": "    \"@flagsmith/nodejs\": \"^9.5.0\","
+        },
+        "installed": null
+      }
+    ],
+    "inits": [
+      {
+        "loc": {
+          "file": "simulate.ts",
+          "line": 4,
+          "snippet": "const flagsmith = new Flagsmith({",
+          "text": "const flagsmith = new Flagsmith({"
+        },
+        "sdk": "node",
+        "style": "constructor",
+        "enableEvents": "true",
+        "apiUrl": null,
+        "eventsApiUrl": null,
+        "hasEventProcessorConfig": false,
+        "propIndent": "  ",
+        "enableEventsLoc": {
+          "file": "simulate.ts",
+          "line": 6,
+          "snippet": "enableEvents: true,",
+          "text": "  enableEvents: true,"
+        },
+        "insertAfter": {
+          "file": "simulate.ts",
+          "line": 4,
+          "snippet": "const flagsmith = new Flagsmith({",
+          "text": "const flagsmith = new Flagsmith({"
+        },
+        "client": "flagsmith"
+      }
+    ],
+    "identifies": [
+      {
+        "loc": {
+          "file": "simulate.ts",
+          "line": 13,
+          "snippet": "const flag = await flagsmith.getExperimentFlag('checkout_button', user.id);",
+          "text": "    const flag = await flagsmith.getExperimentFlag('checkout_button', user.id);"
+        },
+        "expr": "user.id",
+        "raw": "user.id",
+        "via": "getExperimentFlag",
+        "awaited": true,
+        "sdk": "node"
+      }
+    ],
+    "experimentFlags": [
+      {
+        "loc": {
+          "file": "simulate.ts",
+          "line": 13,
+          "snippet": "const flag = await flagsmith.getExperimentFlag('checkout_button', user.id);",
+          "text": "    const flag = await flagsmith.getExperimentFlag('checkout_button', user.id);"
+        },
+        "flag": "checkout_button",
+        "method": "getExperimentFlag",
+        "sdk": "node",
+        "client": "flagsmith",
+        "identifierExpr": "user.id"
+      }
+    ],
+    "plainFlagReads": [],
+    "trackEvents": [
+      {
+        "loc": {
+          "file": "simulate.ts",
+          "line": 16,
+          "snippet": "flagsmith.trackEvent('purchase', { identifier: user.id });",
+          "text": "      flagsmith.trackEvent('purchase', { identifier: user.id });"
+        },
+        "event": "purchase",
+        "raw": "'purchase'",
+        "identifierExpr": "user.id",
+        "sdk": "node",
+        "identifierRaw": "user.id",
+        "client": "flagsmith"
+      }
+    ],
+    "exposures": [],
+    "flushes": [],
+    "exits": [
+      {
+        "loc": {
+          "file": "simulate.ts",
+          "line": 20,
+          "snippet": "process.exit(0);",
+          "text": "  process.exit(0);"
+        },
+        "kind": "process.exit"
+      }
+    ]
+  }
+}
