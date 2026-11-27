@@ -53,6 +53,8 @@ export type GameStats = {
   sessions: number;
   verifiedRepairs: number;
   byVariant: Record<HintVariant, VariantStats>;
+  /** Same as byVariant, restricted to runs whose hint style came from Flagsmith (for reconciliation). */
+  fromFlagsmith: Record<HintVariant, { enrolled: number; repaired: number }>;
   byCase: Record<string, { started: number; repaired: number }>;
   /** Which check failed most on wrong attempts. */
   failingChecks: Record<string, number>;

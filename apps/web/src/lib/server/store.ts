@@ -215,7 +215,16 @@ export function computeStats(rows: SessionRow[]): GameStats {
     if (r.last_failing_check) failingChecks[r.last_failing_check] = (failingChecks[r.last_failing_check] ?? 0) + 1;
   }
 
+  const fromFlagsmith = {
+    [HINT_VARIANTS.control]: { enrolled: 0, repaired: 0 },
+    [HINT_VARIANTS.challenger]: { enrolled: 0, repaired: 0 },
+  } as GameStats["fromFlagsmith"];
+
   for (const r of firstRun.values()) {
+    if (r.source === "flagsmith" && fromFlagsmith[r.variant]) {
+      fromFlagsmith[r.variant].enrolled += 1;
+      if (r.elapsed_ms !== null && r.elapsed_ms <= CHALLENGE_LIMIT_MS) fromFlagsmith[r.variant].repaired += 1;
+    }
     const v = byVariant[r.variant];
     if (!v) continue;
     v.enrolled += 1;
@@ -233,6 +242,7 @@ export function computeStats(rows: SessionRow[]): GameStats {
     sessions: counted.length,
     verifiedRepairs: Object.values(byVariant).reduce((n, v) => n + v.repaired, 0),
     byVariant,
+    fromFlagsmith,
     byCase,
     failingChecks,
     updatedAt: new Date().toISOString(),
