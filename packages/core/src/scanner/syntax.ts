@@ -67,19 +67,31 @@ export interface Prop {
   valueOffset: number;
   valueEnd: number;
   shorthand: boolean;
+  /** Position among the object's top-level entries (spreads included). */
+  index: number;
 }
 
-/** Top-level properties of the object literal whose "{" is at `open`. */
-export function parseObject(code: string, skel: string, open: number): { props: Prop[]; close: number } | null {
+/**
+ * Top-level properties of the object literal whose "{" is at `open`.
+ * `spreads` holds the positions of `...x` entries: a spread may set any key,
+ * so a property only wins if it comes after every spread.
+ */
+export function parseObject(code: string, skel: string, open: number): { props: Prop[]; spreads: number[]; close: number } | null {
   if (skel[open] !== '{') return null;
   const close = findClose(skel, open);
   if (close < 0) return null;
   const props: Prop[] = [];
+  const spreads: number[] = [];
+  let index = -1;
   for (const part of splitTopLevel(skel, open + 1, close)) {
+    index++;
     const text = code.slice(part.start, part.end);
     const lead = text.length - text.trimStart().length;
     const body = text.trim();
-    if (body.startsWith('...')) continue;
+    if (body.startsWith('...')) {
+      spreads.push(index);
+      continue;
+    }
     const m = /^(?:(['"])([^'"]+)\1|([A-Za-z_$][\w$]*))\s*(:)?/.exec(body);
     if (!m) continue;
     const key = (m[2] ?? m[3])!;
@@ -94,12 +106,13 @@ export function parseObject(code: string, skel: string, open: number): { props: 
         valueOffset: part.start + lead + after + valueLead,
         valueEnd: part.end,
         shorthand: false,
+        index,
       });
     } else if (/^[A-Za-z_$][\w$]*$/.test(body)) {
-      props.push({ key, value: key, keyOffset: part.start + lead, valueOffset: part.start + lead, valueEnd: part.end, shorthand: true });
+      props.push({ key, value: key, keyOffset: part.start + lead, valueOffset: part.start + lead, valueEnd: part.end, shorthand: true, index });
     }
   }
-  return { props, close };
+  return { props, spreads, close };
 }
 
 /** Offset of the first non-space character at or after `from`. */
