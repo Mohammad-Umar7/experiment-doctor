@@ -25,13 +25,13 @@ Use a large terminal font (18 px or more), dark theme, 1920×1080. Browser at 10
 | 1:10–1:30 | GitHub PR #1, Files changed tab, annotation | Scroll to `checkout.js:12` | "A harmless-looking rename passes every test. The CI Gate fails the check and points at the exact line. PR #2 changes a label and passes." |
 | 1:30–1:53 | /play | Start a case, open the hint, fix it, verify, watch the heartbeat return | "Human vs Doctor: fix a broken experiment in three minutes. Flagsmith decides which hint you get, a full report or one prioritized fix." |
 | 1:53–2:18 | /rescue | Show the A/B panel, reconciliation, timeline | "The metric is a server-verified repair within 180 seconds, first run per player only. We reconcile our counts with Flagsmith's and show its Bayesian result as is." Read the real numbers. |
-| 2:18–2:42 | bench/BENCHMARK.md on GitHub | Scroll the suite 1 and suite 4 tables | "Plain Claude Code is faster on easy cases. On real ones the Doctor fixed 6 of 6 game cases against 3 of 6, and found 3 of 3 lab bugs in 85 seconds against 1 of 3 in 329." |
+| 2:18–2:42 | bench/BENCHMARK.md on GitHub | Scroll the suite 1 and suite 4 tables | "Plain Claude Code is faster on easy cases. On real ones the Doctor fixed 6 of 6 game cases against 3 of 6, and found all 3 lab bugs in both runs, while plain Claude Code fixed 1 and then none." |
 | 2:42–2:55 | README top, then the hero | Show the evidence index, end on the revived monitor | "One engine powers the CLI, the browser Doctor, the CI Gate and the Agent Skill. Before you trust the winner of your experiment, make sure the experiment is telling the truth." |
 
 ## Numbers to read out (from bench/BENCHMARK.md)
 
 - Six game cases: Doctor 6/6, plain 3/6.
-- Lab: Doctor 3/3 in 85 s for $0.33; plain 1/3 in 329 s for $0.85.
+- Lab, two runs each: Doctor 3/3 both times ($0.33 to $0.36); plain 1/3 then 0/3 ($0.64 to $0.85), same metric-name mistake twice.
 - Easy case: plain wins on speed (21 s vs 44.6 s). Say it.
 
 Experiment numbers: read them off /rescue at recording time. If Flagsmith still shows "collecting data", say so. Never put placeholder numbers in the video.
