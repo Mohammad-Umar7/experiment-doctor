@@ -1,9 +1,12 @@
 "use client";
 
-import { motion } from "motion/react";
-import { duration, ease } from "@/lib/motion";
+import { createElement, useEffect, useRef } from "react";
 
-/** Fades and lifts content 12px the first time it scrolls into view. */
+/**
+ * Fades content in the first time it scrolls into view, with a CSS transition.
+ * Hidden only when the page has the .js class (set before paint in the root layout),
+ * and revealed immediately if IntersectionObserver is missing.
+ */
 export function Reveal({
   children,
   delay = 0,
@@ -15,16 +18,36 @@ export function Reveal({
   className?: string;
   as?: "div" | "section" | "li";
 }) {
-  const Tag = motion[as];
-  return (
-    <Tag
-      className={className}
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: duration.entrance, ease: ease.smooth, delay }}
-    >
-      {children}
-    </Tag>
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      el.dataset.revealed = "";
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.dataset.revealed = "";
+          io.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -80px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return createElement(
+    as,
+    {
+      ref,
+      className,
+      "data-reveal": "",
+      style: { "--reveal-delay": `${Math.round(delay * 1000)}ms` } as React.CSSProperties,
+    },
+    children,
   );
 }

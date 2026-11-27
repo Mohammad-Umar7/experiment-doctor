@@ -40,6 +40,18 @@
   --animate-ecg-sweep: ecg-sweep 2.4s linear infinite;
   --animate-blink: blink 1.2s steps(2, start) infinite;
   --animate-critical-pulse: critical-pulse 1.6s var(--ease-standard) infinite;
+  --animate-rise: rise 450ms var(--ease-smooth) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 
   @keyframes ecg-sweep {
     from {
@@ -131,4 +143,21 @@ body {
   --sh-string: #9fdcc0;
   --sh-keyword: #a98bff;
   --sh-comment: #5c6577;
+}
+
+/*
+ * Scroll reveals are progressive enhancement: content is hidden only once a script has
+ * marked the page with .js, and it fades in with a CSS transition (not a JS animation loop),
+ * so throttled or script-less browsers still show everything.
+ */
+.js [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+[data-reveal] {
+  transition:
+    opacity 450ms var(--ease-smooth),
+    transform 450ms var(--ease-smooth);
+  transition-delay: var(--reveal-delay, 0ms);
 }
