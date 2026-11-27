@@ -67,9 +67,13 @@ Results: see the [Rescue Center](https://experimentdoctor.vercel.app/rescue). Th
 ### Run the Doctor on your own experiment
 
 ```bash
-# in the repo that has the broken experiment, logged in with `flagsmith login`
-npx github:Mohammad-Umar7/experiment-doctor#main check   # until the CLI tarball is released
+# in the repo that has the broken experiment, logged in with `flagsmith login` (Node 20+)
+npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-doctor check
+npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-doctor fix      # one diff, asks y/N
+npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-doctor verify   # patch, pipeline, experiment
 ```
+
+`doctor.tgz` redirects to the [v0.1.0 release](https://github.com/Mohammad-Umar7/experiment-doctor/releases/tag/v0.1.0) tarball: the engine is bundled, no runtime dependencies. Full reference: [docs/cli.md](docs/cli.md).
 
 Or skip installing anything: paste your code into the [browser Doctor](https://experimentdoctor.vercel.app/report). It runs the same engine locally in the page.
 
