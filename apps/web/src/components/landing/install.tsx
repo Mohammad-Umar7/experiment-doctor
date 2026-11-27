@@ -7,7 +7,7 @@ const WAYS = [
   {
     title: "CLI",
     body: "Run it in the repo that has the broken experiment. Read-only until you approve a fix.",
-    command: "npx experiment-doctor check",
+    command: "npx -y --package=https://experimentdoctor.vercel.app/doctor.tgz experiment-doctor check",
   },
   {
     title: "Agent Skill",
