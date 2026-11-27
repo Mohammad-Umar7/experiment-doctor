@@ -17,8 +17,11 @@ export const ed009: Rule = {
       const usesEvents = code.experimentFlags.length + code.trackEvents.length > 0;
       return skip(usesEvents ? 'The SDK is used, but its initialisation was not found in the scanned code.' : 'No SDK initialisation was found.');
     }
-    const off = code.inits.filter((i) => i.enableEvents === null || i.enableEvents === 'false');
-    const dynamic = code.inits.filter((i) => i.enableEvents !== null && i.enableEvents !== 'true' && i.enableEvents !== 'false');
+    // Options built elsewhere (a spread, a helper, a variable): enableEvents is unknown, not missing.
+    const unknown = code.inits.filter((i) => i.opaque && i.enableEvents === null);
+    const visible = code.inits.filter((i) => !unknown.includes(i));
+    const off = visible.filter((i) => i.enableEvents === null || i.enableEvents === 'false');
+    const dynamic = visible.filter((i) => i.enableEvents !== null && i.enableEvents !== 'true' && i.enableEvents !== 'false');
 
     if (off.length) {
       const init = off[0]!;
@@ -33,19 +36,10 @@ export const ed009: Rule = {
         }),
       ]);
     }
-    if (dynamic.length) {
-      const init = dynamic[0]!;
-      return fail([
-        makeFinding(this, {
-          severity: 'warning',
-          title: 'enableEvents depends on runtime configuration',
-          detail: `enableEvents is set to \`${init.enableEvents}\`. If that resolves to false in this environment, the SDK sends no exposures or conversions.`,
-          evidence: [codeItem(`enableEvents: ${init.enableEvents}`, init.enableEventsLoc ?? init.loc)],
-          fix: { summary: 'Make sure enableEvents resolves to true wherever the experiment runs, or set it to true.', docs: DOCS.runExperiment },
-          confidence: 0.5,
-        }),
-      ]);
-    }
+    const notes: string[] = [];
+    if (unknown.length) notes.push(`The SDK options at ${unknown.map((i) => where(i.loc)).join(', ')} are built elsewhere (a spread or a helper), so enableEvents cannot be read: unknown, not missing.`);
+    if (dynamic.length) notes.push(`enableEvents is computed at runtime (\`${dynamic[0]!.enableEvents}\` at ${where(dynamic[0]!.enableEventsLoc ?? dynamic[0]!.loc)}); make sure it is true where the experiment runs.`);
+    if (notes.length) return skip(notes.join(' '));
     return pass(`enableEvents: true is set (${code.inits.map((i) => where(i.loc)).join(', ')}).`);
   },
 };
