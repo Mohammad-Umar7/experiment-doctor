@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Counter } from "@/components/counter";
 import { Eyebrow, Panel } from "@/components/ui/panel";
+import { Timeline, VARIANT_COLOR } from "@/components/rescue/timeline";
 import { StatusPill } from "@/components/ui/status-pill";
 import type { ExperimentResults } from "@/lib/experiment-results";
 import { CASES } from "@/lib/game/cases";
@@ -134,7 +135,8 @@ export function RescueClient() {
               return (
                 <div key={v.key}>
                   <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-[14px] text-fg">
+                    <p className="flex items-center text-[14px] text-fg">
+                      <span className="mr-2 h-2 w-2 rounded-full" style={{ background: VARIANT_COLOR[v.flagsmithKey] }} aria-hidden />
                       <span className="mr-2 font-mono text-fg-muted">{v.letter}</span>
                       {v.label}
                     </p>
@@ -147,7 +149,8 @@ export function RescueClient() {
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-elevated">
                     <motion.div
-                      className={cn("h-full rounded-full", v.letter === "A" ? "bg-fg-secondary" : "bg-accent")}
+                      className="h-full rounded-full"
+                      style={{ background: VARIANT_COLOR[v.flagsmithKey] }}
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.round(rate * 100)}%` }}
                       transition={{ duration: 0.6, ease: ease.smooth }}
@@ -312,6 +315,16 @@ export function RescueClient() {
           </Panel>
         </div>
       </div>
+        {/* Timeline from Flagsmith's own buckets */}
+        <Panel className="mt-6 p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-base font-semibold">Over time, as Flagsmith counts it</h2>
+            <p className="font-mono text-[11px] text-fg-muted">running totals per variant · from the experiment results API</p>
+          </div>
+          <div className="mt-4">
+            <Timeline points={results?.timeline ?? []} />
+          </div>
+        </Panel>
     </div>
   );
 }
