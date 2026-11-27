@@ -10,7 +10,7 @@ export const ed001: Rule = {
   title: 'Every variation has a key',
   layer: 'config',
   node: 'flagsmith',
-  rank: 30,
+  rank: 15,
   run(ctx) {
     const flag = ctx.config?.flag;
     if (flag === undefined) return skip('Flag variations were not collected.');
