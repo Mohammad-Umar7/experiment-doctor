@@ -119,3 +119,16 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Syntax colors for the challenge editor (sugar-high). Strings avoid the healthy green on purpose. */
+:root {
+  --sh-class: #8ab4f8;
+  --sh-identifier: #d6dbe3;
+  --sh-sign: #778195;
+  --sh-property: #8ab4f8;
+  --sh-entity: #c4b0ff;
+  --sh-jsxliterals: #f5b942;
+  --sh-string: #9fdcc0;
+  --sh-keyword: #a98bff;
+  --sh-comment: #5c6577;
+}
