@@ -32,8 +32,10 @@ Repair it and prove it (work on a copy so the example stays broken):
 ```sh
 cp -r examples/broken-apps/04-event-name-case /tmp/case04
 node packages/cli/dist/cli.js fix --evidence /tmp/case04/evidence.json      # shows the diff, asks y/N
-node packages/cli/dist/cli.js verify --dir /tmp/case04                       # rescans the code: VERIFIED
+node packages/cli/dist/cli.js verify --dir /tmp/case04                       # rescans the code: PATCH_VERIFIED
 ```
+
+`verify` reports the patch, the pipeline and the experiment separately. Offline, the pipeline stays `PIPELINE_UNVERIFIED`: only identity-level evidence (a canary or a real user read back with `--event-store` on self-hosted Flagsmith) can verify it.
 
 ## Rebuild the evidence
 
