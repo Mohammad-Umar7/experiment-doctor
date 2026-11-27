@@ -32,7 +32,7 @@ export function Hero() {
             {...rise(2)}
             className="animate-rise mx-auto mt-5 max-w-[560px] text-pretty text-[15px] leading-[1.6] text-fg-secondary sm:text-base"
           >
-            Diagnose broken A/B tests with evidence, not guesses. Repair them with one approved patch. Block the next one in CI.
+            Diagnose broken A/B tests with evidence, not guesses. Repair them with one approved patch. Catch the next one in CI.
             Then race the AI doctor at fixing one.
           </p>
           <div {...rise(3)}>

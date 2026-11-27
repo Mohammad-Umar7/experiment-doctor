@@ -21,7 +21,7 @@ export function CiGate() {
             Renaming <code className="font-mono text-[13px] text-fg">purchase</code> to{" "}
             <code className="font-mono text-[13px] text-fg">Purchase</code> passes every build, every test and every review. The
             experiment just stops counting. The Doctor&apos;s GitHub Action diffs the experiment wiring between the base and the
-            pull request and blocks only what the pull request breaks. Pending data never fails a build. No secrets needed.
+            pull request and fails the check only for what the pull request breaks. Make it a required check and it blocks the merge. Pending data never fails a build. No secrets needed.
           </p>
           <pre className="mt-6 overflow-x-auto rounded-[10px] border border-border bg-canvas px-4 py-3 font-mono text-[12.5px] leading-[1.7] text-fg-secondary">
             {WORKFLOW}
@@ -32,7 +32,7 @@ export function CiGate() {
             rel="noreferrer"
             className="mt-4 inline-block text-[13px] text-fg-secondary underline-offset-4 hover:text-fg hover:underline"
           >
-            See it block a real pull request →
+            See it fail a real pull request →
           </a>
         </Reveal>
 
@@ -42,7 +42,7 @@ export function CiGate() {
               <p className="truncate text-[13px] text-fg">
                 <span className="text-fg-muted">#1</span> Demo: capitalize analytics event names
               </p>
-              <StatusPill status="critical">Blocked</StatusPill>
+              <StatusPill status="critical">Check failing</StatusPill>
             </div>
             <ul className="divide-y divide-border text-[13px]">
               <li className="flex items-center justify-between px-5 py-3">
