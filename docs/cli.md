@@ -39,6 +39,7 @@ experiment-doctor fix [--finding ED-xxx] [--dry-run] [--yes] [--allow-env <key|n
 
 - Code fixes: shows a diff, asks y/N, writes only if the lines are unchanged since the diagnosis and the file resolves (realpath, links included) inside the scanned folder.
 - Flagsmith fixes: shows the exact `flagsmith` command with `<env-key>`, refuses unless the environment is allowlisted, then asks y/N. `--yes` never skips the allowlist. Exit code 3 when refused.
+- `--yes` applies only the change the last `check` showed: it re-diagnoses, and refuses (writing nothing) when the finding, the patch (file, line, before, after) or the command differs from `.experiment-doctor/last-report.json`. Agents show `primary.fix` from `check --json`, then run `fix --yes` after the human's yes.
 
 ### verify
 
@@ -54,7 +55,7 @@ Compares a fresh check with `.experiment-doctor/last-report.json` (verify never 
 | `pipeline` | `PIPELINE_VERIFIED` (identity-level evidence only), `PIPELINE_FAILED`, `PIPELINE_UNVERIFIED` |
 | `experiment` | `EXPERIMENT_HEALTHY`, `EXPERIMENT_PENDING`, `EXPERIMENT_REPAIR_REQUIRED`, `EXPERIMENT_UNVERIFIABLE` |
 
-Pipeline evidence comes from the last canary or, with `--event-store` and `--identity`, from one real user's stored events (the app's own SDK path). Exit code 1 on `PATCH_FAILED` or `PIPELINE_FAILED`.
+Pipeline evidence comes from the last canary or, with `--event-store` and `--identity`, from one real user's stored events (the app's own SDK path; an earlier canary is never used instead, and verify waits up to `--wait 30` seconds for new events). Evidence only counts when it matches the report's environment, experiment, flag and metric event, and when its events are newer than the last fix, or than the start of verify when nothing was fixed (`window` in the JSON). Exit code 1 on `PATCH_FAILED` or `PIPELINE_FAILED`.
 
 ### canary
 
