@@ -211,6 +211,13 @@ export interface InitEvidence {
   propIndent?: string;
   /** Receiver variable for the client (flagsmith, client, ...). */
   client?: string;
+  /**
+   * The options are not fully visible: they contain a spread (`...options`) or
+   * come from a variable or helper the scanner cannot read. Then enableEvents,
+   * apiUrl and eventsApiUrl hold a value only when it is set after every
+   * spread; null means UNKNOWN, not missing.
+   */
+  opaque?: boolean;
 }
 
 export interface IdentifyEvidence {
@@ -298,6 +305,15 @@ export interface CodeEvidence {
   usesFlagsmithMcp?: boolean;
   /** Code that updates an experiment with PUT or the MCP update_experiment tool (Flagsmith #9136). */
   experimentUpdates?: { loc: SourceLocation; via: 'mcp-update_experiment' | 'http-put' }[];
+  /** Folders that hold a package.json ('' is the scan root): each is one app or package. */
+  appRoots?: string[];
+  /** Files left out because they are not app code. */
+  skipped?: SkippedFile[];
+}
+
+export interface SkippedFile {
+  file: string;
+  reason: 'test' | 'bundle' | 'minified' | 'sdk-copy';
 }
 
 // ---------------------------------------------------------------------------
@@ -430,6 +446,10 @@ export interface Report {
     experimentId?: number;
     experimentName?: string;
     environment?: string;
+    /** In a monorepo: the app folder that was diagnosed ('' or '.' is the root). */
+    app?: string;
+    /** Other app folders with Flagsmith code that were not mixed in (diagnose them with --dir). */
+    otherApps?: string[];
   };
   layers: Record<Layer, LayerStatus>;
   pipeline: PipelineNode[];
