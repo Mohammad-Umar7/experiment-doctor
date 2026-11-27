@@ -60,6 +60,13 @@ export function loadEvidence(path: string): Evidence {
   return { schemaVersion: 1, config: ev.config ?? null, code: ev.code ?? null, ...ev } as Evidence;
 }
 
+/** Where the app and its .experiment-doctor/ live: --dir, else next to --evidence, else the cwd. */
+export function stateRoot(io: Io, opts: Pick<CheckOptions, 'dir' | 'evidence'>): string {
+  if (opts.dir) return resolve(io.cwd, opts.dir);
+  if (opts.evidence) return dirname(resolve(io.cwd, opts.evidence));
+  return io.cwd;
+}
+
 /** Collects evidence, diagnoses, and saves the report. Shared by check, fix and verify. */
 export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun> {
   const notes: string[] = [];
@@ -67,7 +74,7 @@ export async function performCheck(io: Io, opts: CheckOptions): Promise<CheckRun
   let envKey: string | undefined;
   const evidencePath = opts.evidence ? resolve(io.cwd, opts.evidence) : undefined;
   // With --evidence and no --dir, the app lives next to the evidence file.
-  const root = opts.dir ? resolve(io.cwd, opts.dir) : evidencePath ? dirname(evidencePath) : io.cwd;
+  const root = stateRoot(io, opts);
 
   if (evidencePath) {
     evidence = loadEvidence(evidencePath);
