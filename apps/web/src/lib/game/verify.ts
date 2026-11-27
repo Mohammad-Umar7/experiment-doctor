@@ -299,7 +299,10 @@ export function verifyRepair(code: string, target: VerifyTarget): VerifyResult {
     ),
   );
 
-  const joined = matching.find((c) => c.identity !== null && c.identity === exposureIdentity);
+  // Judge identity on the matching conversions when there are any; otherwise on whatever
+  // conversion fires, so a name mismatch is not also reported as an identity mismatch.
+  const pool = matching.length > 0 ? matching : afterExposure;
+  const joined = pool.find((c) => c.identity !== null && c.identity === exposureIdentity);
   checks.push(
     check(
       "identity",
@@ -308,8 +311,8 @@ export function verifyRepair(code: string, target: VerifyTarget): VerifyResult {
         ? undefined
         : exposureIdentity === null
           ? "No exposure to join the conversion to yet."
-          : matching.length === 0
-            ? "No matching conversion to join."
+          : pool.length === 0
+            ? "No conversion to join."
             : "The conversion is sent under a different identity than the exposure.",
     ),
   );
