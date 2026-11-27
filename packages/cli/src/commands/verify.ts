@@ -41,7 +41,7 @@ export async function verifyCommand(io: Io, argv: string[]): Promise<number> {
     io.stdout.write(`${JSON.stringify(redactDeep({ ...cmp, summary: run.report.summary, next: nextStep(run.report), notes: run.notes }, secrets))}\n`);
   } else {
     const c = makePalette(io.env, io.stdout.isTTY);
-    io.stdout.write(`${renderComparison(cmp, c)}${renderPipeline(redactDeep(run.report, secrets), c)}\n\n`);
+    io.stdout.write(`${renderComparison(cmp, c)}\n${renderPipeline(redactDeep(run.report, secrets), c)}\n\n`);
     for (const n of run.notes) io.stdout.write(`  ${c.muted(n)}\n`);
   }
   return cmp.status === 'FAILED' ? 1 : 0;
