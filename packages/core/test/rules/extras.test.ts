@@ -35,11 +35,13 @@ describe('ED-015 empty rollout', () => {
 });
 
 describe('ED-016 no events received', () => {
-  it('warns when a long-running experiment has zero events', () => {
+  it('treats zero events as pending, never as broken', () => {
     expect(ed016.run(buildContext(healthyEvidence())).status).toBe('pass');
     const ev = healthyEvidence();
     ev.config!.warehouses![0]!.totalEventsReceived = 0;
-    expect(ed016.run(buildContext(ev)).findings![0]!.severity).toBe('warning');
+    const out = ed016.run(buildContext(ev));
+    expect(out.status).toBe('pending');
+    expect(out.findings![0]).toMatchObject({ kind: 'pending', severity: 'info' });
   });
 
   it('gives a fresh experiment time', () => {
