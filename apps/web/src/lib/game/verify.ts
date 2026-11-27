@@ -87,8 +87,34 @@ function collect(code: string, root: AnyNode) {
   const calls: SdkCall[] = [];
   const navigations: Navigation[] = [];
 
+  const unused = unusedFunctionNames(root);
+
   function walk(node: AnyNode, onUnload: boolean) {
     let childUnload = onUnload;
+
+    // Code that can never run does not count: `if (false) {...}`, `false && call()`,
+    // `cond ? ... : ...` with a constant test, and named functions nothing references.
+    if (node.type === "IfStatement" && isConstant(node.test as AnyNode)) {
+      const branch = isTruthy(node.test as AnyNode) ? node.consequent : node.alternate;
+      if (isNode(branch)) walk(branch, onUnload);
+      return;
+    }
+    if (node.type === "ConditionalExpression" && isConstant(node.test as AnyNode)) {
+      walk((isTruthy(node.test as AnyNode) ? node.consequent : node.alternate) as AnyNode, onUnload);
+      return;
+    }
+    if (node.type === "LogicalExpression" && isConstant(node.left as AnyNode)) {
+      const leftTruthy = isTruthy(node.left as AnyNode);
+      const rightRuns = node.operator === "&&" ? leftTruthy : node.operator === "||" ? !leftTruthy : true;
+      if (rightRuns) walk(node.right as AnyNode, onUnload);
+      return;
+    }
+    if (node.type === "FunctionDeclaration" && unused.has(((node.id as AnyNode | null)?.name as string) ?? "")) return;
+    if (node.type === "VariableDeclarator") {
+      const id = node.id as AnyNode;
+      const init = node.init as AnyNode | null;
+      if (id.type === "Identifier" && init && /Function/.test(init.type) && unused.has(id.name as string)) return;
+    }
 
     if (node.type === "CallExpression") {
       const callee = node.callee as AnyNode;
@@ -129,6 +155,52 @@ function collect(code: string, root: AnyNode) {
   calls.sort((a, b) => a.start - b.start);
   navigations.sort((a, b) => a.start - b.start);
   return { calls, navigations };
+}
+
+function isConstant(node: AnyNode): boolean {
+  if (node.type === "Literal") return true;
+  if (node.type === "Identifier" && node.name === "undefined") return true;
+  if (node.type === "UnaryExpression" && node.operator === "!") return isConstant(node.argument as AnyNode);
+  return false;
+}
+
+function isTruthy(node: AnyNode): boolean {
+  if (node.type === "Literal") return Boolean(node.value);
+  if (node.type === "Identifier") return false; // undefined
+  if (node.type === "UnaryExpression" && node.operator === "!") return !isTruthy(node.argument as AnyNode);
+  return true;
+}
+
+/** Names of functions (declarations or `const f = () => ...`) that nothing else references. */
+function unusedFunctionNames(root: AnyNode): Set<string> {
+  const declared = new Map<string, AnyNode>();
+  const referenced = new Map<string, number>();
+
+  function visit(node: AnyNode, parent: AnyNode | null) {
+    if (node.type === "FunctionDeclaration" && node.id) declared.set((node.id as AnyNode).name as string, node.id as AnyNode);
+    if (node.type === "VariableDeclarator") {
+      const id = node.id as AnyNode;
+      const init = node.init as AnyNode | null;
+      if (id.type === "Identifier" && init && /Function/.test(init.type)) declared.set(id.name as string, id);
+    }
+    if (node.type === "Identifier") {
+      const isDeclarationId =
+        (parent?.type === "FunctionDeclaration" && parent.id === node) ||
+        (parent?.type === "VariableDeclarator" && parent.id === node);
+      const isPropertyKey = parent?.type === "MemberExpression" && parent.property === node && !parent.computed;
+      if (!isDeclarationId && !isPropertyKey) referenced.set(node.name as string, (referenced.get(node.name as string) ?? 0) + 1);
+    }
+    for (const key of Object.keys(node)) {
+      if (key === "type" || key === "start" || key === "end" || key === "loc") continue;
+      const value = node[key];
+      if (Array.isArray(value)) {
+        for (const item of value) if (isNode(item)) visit(item, node);
+      } else if (isNode(value)) visit(value, node);
+    }
+  }
+
+  visit(root, null);
+  return new Set([...declared.keys()].filter((name) => !referenced.has(name)));
 }
 
 function initEnablesEvents(call: SdkCall | undefined): boolean {
