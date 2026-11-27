@@ -296,6 +296,8 @@ export interface CodeEvidence {
   exits: ExitEvidence[];
   /** True when the repo wires the Flagsmith MCP server (.mcp.json and friends). */
   usesFlagsmithMcp?: boolean;
+  /** Code that updates an experiment with PUT or the MCP update_experiment tool (Flagsmith #9136). */
+  experimentUpdates?: { loc: SourceLocation; via: 'mcp-update_experiment' | 'http-put' }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -407,6 +409,8 @@ export interface UpstreamMatch {
   title: string;
   url: string;
   state: 'open' | 'closed';
+  /** Date the issue state was last checked (YYYY-MM-DD). */
+  checkedOn: string;
   confidence: number;
   matched: string[];
   workaround: string | null;
