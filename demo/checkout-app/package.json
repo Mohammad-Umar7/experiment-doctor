@@ -1,0 +1,8 @@
+{
+  "name": "checkout-app",
+  "private": true,
+  "description": "Tiny storefront used to demo the Experiment Doctor CI Gate.",
+  "dependencies": {
+    "@flagsmith/flagsmith": "^12.6.0"
+  }
+}
