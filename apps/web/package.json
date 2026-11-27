@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@flagsmith/flagsmith": "^12.6.0",
@@ -29,5 +31,8 @@
     "typescript": "^5",
     "vitest": "^3.2.7"
   },
-  "packageManager": "pnpm@10.33.2"
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": "22.x"
+  }
 }
