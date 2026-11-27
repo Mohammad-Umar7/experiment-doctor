@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | `check` | no (GET only) | `.experiment-doctor/last-report.json` | nothing |
 | `verify` | no | nothing | a previous `check` or `fix` |
-| `fix` (code patch) | no | the one patched line(s), only if unchanged since the diagnosis and inside the scanned folder (realpath, links included) | y/N, or `--yes` after the human said yes |
+| `fix` (code patch) | no | the one patched line(s), only if unchanged since the diagnosis and inside the scanned folder (realpath, links included) | y/N, or `--yes` after the human said yes to the patch the last check showed (refused if a fresh diagnosis differs) |
 | `fix` (flagsmith command) | yes | `.experiment-doctor/last-fix.json` | allowlisted environment **and** y/N |
 | `canary` | yes (one identity, two events) | `.experiment-doctor/canary.json` | allowlisted environment **and** the typed environment name (or `--yes`) |
 
@@ -37,6 +37,6 @@ An unknown environment, an empty list, or an unreadable file means no. A name th
 | `verify --event-store --identity <real user>` PIPELINE_VERIFIED | a real user's exposure and conversion were stored, in order | statistical results |
 | `EXPERIMENT_HEALTHY` | every required check passes and results have 50 identities / 5 conversions per variation | which variation wins (read the interval) |
 
-Aggregate counters (warehouse `total_events_received`, last event time) are never used as proof: other traffic moves them.
+Aggregate counters (warehouse `total_events_received`, last event time) are never used as proof: other traffic moves them. Identity-level evidence only counts for the same environment, experiment, flag and metric event as the current report, and only for events newer than the fix (or than the start of verify when nothing was fixed).
 
 `--event-store` works with the self-hosted "Flagsmith database" warehouse: `docker:<compose project>[/<service>]` runs psql in that Postgres container, `psql:<url>` runs a local psql. Identity and key are passed as psql variables on stdin.

@@ -42,15 +42,21 @@
   "experiment": { "status": "EXPERIMENT_PENDING", "verdict": "PENDING", "message": "..." },
   "resolved": ["ED-004"], "remaining": [], "introduced": [],
   "verdictBefore": "REPAIR_REQUIRED", "verdictAfter": "PENDING",
+  "window": { "since": "2026-11-28T10:00:00.000Z", "reason": "repair" },
   "summary": "...", "next": "...", "notes": []
 }
 ```
 
 - `patch.status`: `PATCH_VERIFIED` | `PATCH_FAILED` | `PATCH_UNVERIFIED` | `NO_PATCH_TARGET`.
 - `pipeline.status`: `PIPELINE_VERIFIED` (identity-level evidence only) | `PIPELINE_FAILED` (a fresh probe shows rejection or wrong storage) | `PIPELINE_UNVERIFIED`.
+- Pipeline evidence counts only when its `probe.binding` (environment fingerprint, experiment id, flag, metric event) matches the current report and it is newer than `window.since`: the last fix (`reason: "repair"`), or the start of this verify run when nothing was fixed (`"verify-start"`). With `--identity`, an earlier canary is never used.
 - `experiment.status`: `EXPERIMENT_HEALTHY` | `EXPERIMENT_PENDING` | `EXPERIMENT_REPAIR_REQUIRED` | `EXPERIMENT_UNVERIFIABLE`.
 - Exit code 1 when `PATCH_FAILED` or `PIPELINE_FAILED`.
 
 ## `experiment-doctor canary --json`
 
-`{"status": "VERIFIED" | "ACCEPTED" | "FAILED" | "PENDING", "identity", "environment", "identityLevel", "scope": "ingestion-http", "steps": [...], "message", "maxLatencyMs"}`. `VERIFIED` needs `--event-store`.
+`{"status": "VERIFIED" | "ACCEPTED" | "FAILED" | "PENDING", "identity", "environment", "identityLevel", "scope": "ingestion-http", "steps": [...], "message", "maxLatencyMs", "binding": {"envFingerprint", "experimentId", "flag", "event", "sentAt"}, "evidenceAt"?}`. `VERIFIED` needs `--event-store`, and only events newer than `sentAt` count.
+
+## `experiment-doctor fix --yes --json`
+
+`{"finding", "action": "patched" | "ran-command" | "refused" | "failed" | ..., "file"?, "command"?, "message"}`. With `--yes`, fix refuses (`refused`, exit 3) unless the patch or command it would apply equals the one in `.experiment-doctor/last-report.json`.
