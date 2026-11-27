@@ -15,7 +15,7 @@ import { CASES, getCase, type GameCase } from "@/lib/game/cases";
 import { expose, flagsmithConfigured, getPlayerId, practiceVariant, prepare, trackHintOpened, trackVerifiedRepair } from "@/lib/game/experiment";
 import type { AssignmentSource } from "@/lib/game/types";
 import type { StageKey } from "@/lib/game/verify";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { doctorRecordFor } from "@/lib/doctor-record";
 import { ease } from "@/lib/motion";
 import { sounds, setSoundEnabled, soundEnabled } from "@/lib/sound";
 import { CHALLENGE_LIMIT_MS, type HintVariant } from "@/lib/site";
@@ -216,8 +216,8 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
           </div>
           <div className="hidden sm:block">
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted">Doctor&apos;s record</p>
-            <p className="font-mono text-[22px] leading-none text-healthy tabular">{DOCTOR_RECORD.time}</p>
-            <p className="mt-1 font-mono text-[10px] text-fg-muted">{DOCTOR_RECORD.tokens.toLocaleString("en-US")} tokens</p>
+            <p className="font-mono text-[22px] leading-none text-healthy tabular">{doctorRecordFor(game.id).time}</p>
+            <p className="mt-1 font-mono text-[10px] text-fg-muted">{doctorRecordFor(game.id).turns} agent turns · {doctorRecordFor(game.id).model}</p>
           </div>
           <button
             type="button"
@@ -327,6 +327,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
               counted={counted}
               variant={variant}
               caseTitle={`Case ${game.id}`}
+              caseId={game.id}
               onPlayAgain={playAgain}
             />
           )}
@@ -382,7 +383,7 @@ function Intro({
         <li>· Edit the code, then verify. The server checks the SDK call order statically, it never runs your code.</li>
         <li>· One hint from the Doctor if you get stuck.</li>
         <li>
-          · Doctor&apos;s record: <span className="font-mono text-healthy">{DOCTOR_RECORD.time}</span>
+          · Doctor&apos;s record: <span className="font-mono text-healthy">{doctorRecordFor(game.id).time}</span>
         </li>
       </ul>
       <p className="mt-4 rounded-md border border-accent/30 bg-accent/[0.06] px-3 py-2 text-[12px] leading-[1.55] text-fg-secondary">

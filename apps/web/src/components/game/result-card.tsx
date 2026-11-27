@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { doctorRecordFor } from "@/lib/doctor-record";
 import { formatMs } from "@/lib/game/time";
 import { ease } from "@/lib/motion";
 import { HINT_VARIANTS, type HintVariant } from "@/lib/site";
@@ -21,6 +21,7 @@ export function SuccessCard({
   counted,
   variant,
   caseTitle,
+  caseId,
   onPlayAgain,
 }: {
   elapsedMs: number;
@@ -29,8 +30,10 @@ export function SuccessCard({
   counted: boolean;
   variant: HintVariant;
   caseTitle: string;
+  caseId: string;
   onPlayAgain: () => void;
 }) {
+  const doctor = doctorRecordFor(caseId);
   const [handle, setHandle] = useState("");
   const [claimState, setClaimState] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [claimed, setClaimed] = useState<string | null>(null);
@@ -42,14 +45,14 @@ export function SuccessCard({
     cardRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
   }, []);
 
-  const diff = elapsedMs - DOCTOR_RECORD.ms;
+  const diff = elapsedMs - doctor.ms;
   const beat = diff < 0;
   const time = formatMs(elapsedMs);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = share ? `${origin}/s/${share}` : `${origin}/play`;
   const shareText = beat
-    ? `I fixed a broken A/B test in ${time} and beat the AI Doctor (${DOCTOR_RECORD.time}). Can you?`
-    : `I fixed a broken Flagsmith experiment in ${time}. The AI Doctor did it in ${DOCTOR_RECORD.time}. Can you beat it?`;
+    ? `I fixed a broken A/B test in ${time} and beat the AI Doctor (${doctor.time}). Can you?`
+    : `I fixed a broken Flagsmith experiment in ${time}. The AI Doctor did it in ${doctor.time}. Can you beat it?`;
 
   async function claim(e: React.FormEvent) {
     e.preventDefault();
@@ -89,7 +92,7 @@ export function SuccessCard({
           <span className="text-healthy">you beat the Doctor by {formatMs(-diff)}</span>
         ) : (
           <span>
-            {formatMs(diff)} behind the Doctor ({DOCTOR_RECORD.time})
+            {formatMs(diff)} behind the Doctor ({doctor.time})
           </span>
         )}
       </p>
