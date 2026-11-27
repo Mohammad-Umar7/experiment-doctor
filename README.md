@@ -175,10 +175,12 @@ Same model (Claude Sonnet 5.5), same prompts, graded mechanically. Full method, 
 
 | Suite | Doctor | Plain Claude Code |
 | --- | --- | --- |
-| Six game cases (one bug each) | **6/6 fixed**, 216 s, $1.29 | 3/6 fixed, 272 s, $1.16 |
-| Self-hosted lab (3 bugs, code + config), 2 runs | **3/3 both runs**, $0.33 to $0.36 | 1/3 then 0/3, $0.64 to $0.85 |
+| Six game cases (one bug each)* | **6/6 fixed**, 216 s, $1.29 | 3/6 fixed, 272 s, $1.16 |
+| Self-hosted lab (3 bugs, code + config), 2 runs | **3/3 identified both runs** (code fixed, config fix proposed), $0.33 to $0.36 | 1/3 then 0/3, $0.64 to $0.85 |
 | Easy case, answer in the evidence | fixed and verified, 44.6 s, $0.22 | **fixed, 21.0 s, $0.16** |
 | Healthy app | no change, correct | no change, correct, **cheaper** |
+
+\* All six reused one evidence file whose exposure counts don't match three of the cases' real symptoms; see the caveat in the benchmark.
 
 The Doctor is not faster on trivial cases. It wins where Flagsmith-specific knowledge matters: `trackEvent` only buffers, `enableEvents` gates everything, `getValue` records no exposure, a variation without a key drops its exposures.
 
