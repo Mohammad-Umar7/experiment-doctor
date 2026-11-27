@@ -1,0 +1,9 @@
+{
+  "name": "checkout-web",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@flagsmith/flagsmith": "^12.6.0",
+    "vite": "^6.0.0"
+  }
+}
