@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ButtonLink } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status-pill";
-import { DOCTOR_RECORD } from "@/lib/doctor-record";
+import { DOCTOR_RUNS, doctorRecordFor } from "@/lib/doctor-record";
 import { CASES } from "@/lib/game/cases";
 import type { LeaderboardEntry } from "@/lib/game/types";
 import { formatMs } from "@/lib/game/time";
@@ -43,7 +43,7 @@ export function LeaderboardClient() {
     };
   }, []);
 
-  const humansAhead = entries?.filter((e) => e.elapsedMs < DOCTOR_RECORD.ms).length ?? 0;
+  const humansAhead = entries?.filter((e) => e.elapsedMs < doctorRecordFor(e.caseId).ms).length ?? 0;
 
   return (
     <div className="mx-auto w-full max-w-[960px] px-4 pb-20 pt-10 sm:px-6 sm:pt-14">
@@ -62,15 +62,29 @@ export function LeaderboardClient() {
       </p>
 
       {/* AI benchmark, pinned apart so a faster human really takes first place */}
-      <div className="mt-8 flex items-center justify-between gap-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent/[0.06] px-5 py-4">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#a98bff]">AI benchmark</span>
-          <span className="text-[15px] font-medium text-fg">Experiment Doctor</span>
+      <div className="mt-8 rounded-[var(--radius-card)] border border-accent/30 bg-accent/[0.06] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#a98bff]">AI benchmark</span>
+            <span className="text-[15px] font-medium text-fg">Experiment Doctor</span>
+          </div>
+          <p className="font-mono text-[11px] text-fg-muted">
+            measured runs · {Object.values(DOCTOR_RUNS)[0]?.model} with the Doctor skill · same code as the game
+          </p>
         </div>
-        <div className="text-right">
-          <p className="font-mono text-[20px] tabular text-healthy">{DOCTOR_RECORD.time}</p>
-          <p className="font-mono text-[11px] text-fg-muted">{DOCTOR_RECORD.tokens.toLocaleString("en-US")} tokens · case 001</p>
-        </div>
+        <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {CASES.map((c) => {
+            const d = doctorRecordFor(c.id);
+            return (
+              <li key={c.id} className="rounded-md border border-border bg-canvas/50 px-3 py-2">
+                <p className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-fg-muted">
+                  {c.id} {c.title}
+                </p>
+                <p className="mt-0.5 font-mono text-[15px] tabular text-healthy">{d.time}</p>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
@@ -109,7 +123,7 @@ export function LeaderboardClient() {
           <motion.ol layout>
             <AnimatePresence initial={false}>
               {entries.map((e, i) => {
-                const beat = e.elapsedMs < DOCTOR_RECORD.ms;
+                const beat = e.elapsedMs < doctorRecordFor(e.caseId).ms;
                 return (
                   <motion.li
                     layout
