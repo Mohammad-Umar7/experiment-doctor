@@ -67,6 +67,8 @@ describe('compareReports', () => {
     expect(v.pipeline.message).toMatch(/no identity-level read/);
     const proven = compareReports(before, diagnose(healthyEvidence()), { ...probe, status: 'IDENTITY_VERIFIED', identityLevel: true });
     expect(proven.pipeline.status).toBe('PIPELINE_VERIFIED');
+    const failed = compareReports(before, diagnose(healthyEvidence()), { ...probe, status: 'FAILED', identityLevel: true, detail: 'no "purchase" event stored' });
+    expect(failed.pipeline).toMatchObject({ status: 'PIPELINE_FAILED', message: 'The probe for doctor-canary-1 failed: no "purchase" event stored' });
   });
 });
 

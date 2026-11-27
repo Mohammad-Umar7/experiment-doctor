@@ -5,11 +5,12 @@ import type { Report, RuleId, Verdict } from './types';
  * green check:
  *
  * - patch:      does the rule the last report targeted now pass? (static + config evidence)
- * - pipeline:   is there identity-level proof that an exposure and a conversion reached storage? (only from a probe)
+ * - pipeline:   is there identity-level proof that an exposure and a conversion reached storage? (only from a probe;
+ *               PIPELINE_FAILED when a fresh probe shows they did not)
  * - experiment: does the whole experiment pass every required check, with enough results data?
  */
 export type PatchStatus = 'PATCH_VERIFIED' | 'PATCH_FAILED' | 'PATCH_UNVERIFIED' | 'NO_PATCH_TARGET';
-export type PipelineStatus = 'PIPELINE_VERIFIED' | 'PIPELINE_UNVERIFIED';
+export type PipelineStatus = 'PIPELINE_VERIFIED' | 'PIPELINE_FAILED' | 'PIPELINE_UNVERIFIED';
 export type ExperimentLevelStatus = 'EXPERIMENT_HEALTHY' | 'EXPERIMENT_PENDING' | 'EXPERIMENT_REPAIR_REQUIRED' | 'EXPERIMENT_UNVERIFIABLE';
 
 /** What the last active probe (canary) established. */
@@ -22,6 +23,8 @@ export interface PipelineProbe {
   identityLevel: boolean;
   /** Where the identity's events came from: a canary over HTTP, or the app's own SDK traffic. */
   scope?: 'ingestion-http' | 'app-sdk';
+  /** What the probe saw, in plain words. */
+  detail?: string;
 }
 
 export interface Verification {
@@ -69,6 +72,9 @@ function pipelineStatus(before: Report, probe: PipelineProbe | null | undefined)
   if (probe.identityLevel && probe.status === 'IDENTITY_VERIFIED' && fresh) {
     const via = probe.scope === 'app-sdk' ? "your app's SDK traffic" : probe.scope === 'ingestion-http' ? "a canary sent over HTTP (not your app's SDK path)" : 'a probe';
     return { status: 'PIPELINE_VERIFIED', message: `The event store holds the exposure and the conversion of ${probe.identity}, in order (identity-level, from ${via}).`, probe };
+  }
+  if (probe.status === 'FAILED' && fresh) {
+    return { status: 'PIPELINE_FAILED', message: `The probe for ${probe.identity} failed${probe.detail ? `: ${probe.detail}` : '.'}`, probe };
   }
   const why =
     probe.status === 'ACCEPTED'
