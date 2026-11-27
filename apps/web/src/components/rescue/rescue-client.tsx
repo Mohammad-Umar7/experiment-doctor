@@ -104,7 +104,7 @@ export function RescueClient() {
         <Kpi label="Players" hint="first counted run each">
           <Counter value={stats?.players ?? 0} />
         </Kpi>
-        <Kpi label="Verified repairs" hint="inside 3 minutes">
+        <Kpi label="Challenge repairs" hint="statically verified, inside 3 min">
           <Counter value={stats?.verifiedRepairs ?? 0} className="text-healthy" />
         </Kpi>
         <Kpi label="Repair rate" hint="all players">
