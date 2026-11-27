@@ -72,19 +72,19 @@ export function Pipeline({
               layout
               className={cn(
                 "flex items-center gap-1.5 rounded-[8px] border bg-surface font-mono font-medium uppercase transition-[border-color,color,box-shadow] duration-300",
-                compact ? "px-1.5 py-1 text-[9px] tracking-[0.06em] sm:px-2 sm:text-[10px]" : "px-2.5 py-1.5 text-[10px] tracking-[0.1em] sm:text-[11px]",
+                compact ? "gap-1 px-1.5 py-1 text-[9px] tracking-[0.04em]" : "px-2.5 py-1.5 text-[10px] tracking-[0.1em] sm:text-[11px]",
                 nodeTone[stage.status],
               )}
               title={stage.detail ?? `${stage.label}: ${statusWord[stage.status]}`}
             >
-              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotTone[stage.status])} aria-hidden />
+              <span className={cn("shrink-0 rounded-full", compact ? "h-1 w-1" : "h-1.5 w-1.5", dotTone[stage.status])} aria-hidden />
               {stage.label}
             </motion.div>
             <span className="sr-only">{`${stage.label}: ${statusWord[stage.status]}`}</span>
           </div>
 
           {i < stages.length - 1 && (
-            <div className="relative mx-1 h-px flex-1 overflow-hidden bg-border sm:mx-2">
+            <div className={cn("relative h-px min-w-[6px] flex-1 overflow-hidden bg-border", compact ? "mx-0.5" : "mx-1 sm:mx-2")}>
               <div
                 className={cn(
                   "absolute inset-0 transition-colors duration-500",
