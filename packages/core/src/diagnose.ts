@@ -92,7 +92,7 @@ function summarize(verdict: Verdict, findings: Finding[], pipeline: PipelineNode
     case 'PENDING':
       return `No defect found; waiting for data: ${primary ? primary.title.replace(/^./, (c) => c.toLowerCase()) : 'results are not ready'}.`;
     case 'HEALTHY':
-      return 'Healthy: exposures and conversions flow from the app through Flagsmith to results.';
+      return 'Healthy: every required check passed and the results show enough exposures and conversions in every variation.';
     case 'UNVERIFIABLE': {
       const unknown = pipeline.filter((n) => n.status === 'unknown').map((n) => n.label);
       const skipped = checks.filter((c) => c.status === 'skip').length;
