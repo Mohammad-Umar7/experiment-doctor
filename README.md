@@ -45,6 +45,7 @@ AFTER   identity doctor-probe-mwzet3ec, after the approved patch
 | **T2 AI Agents and Feature Flags** | [CLI: approval gates, fail-closed allowlist](docs/cli.md) · [failing PR #1](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [passing PR #2](https://github.com/Mohammad-Umar7/experiment-doctor/pull/2) |
 | **T3 Build on Open Source Flagsmith** | [Reproducible self-hosted lab with per-identity verification](selfhost) |
 | **T4 Flagsmith Agent Skills** | [The skill](skills/flagsmith-experiment-doctor) · [measured benchmark, losses included](bench/BENCHMARK.md) |
+| **All tracks: precision on real code** | [Field audit on 8 public repos: 4/8 false alarms before, 0/8 after](docs/field-audit.md) |
 
 > **The Doctor caught a bug in its own setup.** While seeding the self-hosted experiment we sent the variation with `key: "one_click"` inside `multivariate_options` on feature create. The stored variation came back with `key: null`, so its exposures would never be attributed. We did not plant this: Experiment Doctor reported it as ED-001 on its first run against the lab. Details: [selfhost/README.md](selfhost/README.md).
 
@@ -190,6 +191,7 @@ The Doctor is not faster on trivial cases. It wins where Flagsmith-specific know
 - On Flagsmith Cloud the Doctor cannot read individual events, so a probe there ends at *accepted* or *pending*, never *verified*. Per-identity verification needs an event store we can read, like the self-hosted lab's.
 - Zero conversions is not automatically a bug. Without evidence of a defect the Doctor says *pending* or *unverifiable*.
 - Upstream bug matches say "may be consistent with", never "not your fault".
+- **The first field run had false alarms.** On 8 public repositories that call `getExperimentFlag`, the first version flagged 4 as repair-required, and all 4 were wrong: test files, a bundled SDK copy, a monorepo with two apps, and options built by a helper. After two rounds of fixes, 0 of 8 are flagged and no code check fails. That run was code-only, so it measures precision, not recall. Anonymized before-and-after results: [docs/field-audit.md](docs/field-audit.md).
 
 ## Repository
 
