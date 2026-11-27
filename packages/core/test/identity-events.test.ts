@@ -32,3 +32,48 @@ describe('identity-level pipeline evidence', () => {
     expect(IDENTITY_EVENTS_SQL).toContain(":'env'");
   });
 });
+
+describe('binding to the repair window and the experiment', () => {
+  const tagged = (exp: number, at: string) => `$flag_exposure\tcheckout_button\t${at}\tgreen\t{"experiment_id":${exp}}`;
+  const buy = (at: string) => `purchase\t\t${at}\t\t{}`;
+
+  it('ignores events older than the repair', () => {
+    const v = evaluateIdentityEvents('u1', rows(tagged(42, '2026-11-28T09:00:00.000Z'), buy('2026-11-28T09:00:01.000Z')), {
+      flag: 'checkout_button',
+      event: 'purchase',
+      experimentId: 42,
+      since: '2026-11-28T10:00:00.000Z',
+    });
+    expect(v).toMatchObject({ status: 'PENDING', stale: 2 });
+    expect(v.message).toMatch(/older than 2026-11-28T10:00:00.000Z/);
+  });
+
+  it('counts only fresh events when old and new are mixed', () => {
+    const v = evaluateIdentityEvents(
+      'u1',
+      rows(tagged(42, '2026-11-28T09:00:00.000Z'), buy('2026-11-28T09:00:01.000Z'), tagged(42, '2026-11-28T10:05:00.000Z')),
+      { flag: 'checkout_button', event: 'purchase', experimentId: 42, since: '2026-11-28T10:00:00.000Z' },
+    );
+    expect(v).toMatchObject({ status: 'PENDING', stale: 2, problems: ['no "purchase" event yet'] });
+  });
+
+  it('only counts exposures tagged with the current experiment', () => {
+    const other = evaluateIdentityEvents('u1', rows(tagged(7, '2026-11-28T10:00:00.000Z'), buy('2026-11-28T10:00:01.000Z')), { flag: 'checkout_button', event: 'purchase', experimentId: 42 });
+    expect(other.status).toBe('PENDING');
+    expect(other.problems[0]).toMatch(/belongs to experiment 7, not 42/);
+    const untagged = evaluateIdentityEvents('u1', rows('$flag_exposure\tcheckout_button\t2026-11-28T10:00:00.000Z\tgreen\t{}', buy('2026-11-28T10:00:01.000Z')), { flag: 'checkout_button', event: 'purchase', experimentId: 42 });
+    expect(untagged.problems[0]).toMatch(/carries no experiment_id/);
+    const ok = evaluateIdentityEvents('u1', rows(tagged(42, '2026-11-28T10:00:00.000Z'), buy('2026-11-28T10:00:01.000Z')), { flag: 'checkout_button', event: 'purchase', experimentId: 42 });
+    expect(ok.status).toBe('IDENTITY_VERIFIED');
+  });
+
+  it('a missing conversion is pending, not failed', () => {
+    expect(evaluateIdentityEvents('u1', rows(tagged(42, '2026-11-28T10:00:00.000Z')), { flag: 'checkout_button', event: 'purchase', experimentId: 42 }).status).toBe('PENDING');
+  });
+
+  it('fingerprints keys without exposing them', async () => {
+    const { keyFingerprint } = await import('../src/identity-events');
+    expect(keyFingerprint('aB3dE5fG7hJ9kL1mN3pQ5r')).toMatch(/^fnv1a:[0-9a-f]{8}$/);
+    expect(keyFingerprint('a')).not.toBe(keyFingerprint('b'));
+  });
+});
