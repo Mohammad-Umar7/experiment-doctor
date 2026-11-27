@@ -20,7 +20,7 @@ import type { Io } from '../io';
 import { authorizeMutation, loadPolicy, POLICY_FILE } from '../safety';
 import { saveState } from '../state';
 import { describeEventStore, parseEventStore, readIdentityEvents, type EventStoreSpec } from '../event-store';
-import { evaluateIdentityEvents } from '@experiment-doctor/core';
+import { evaluateIdentityEvents, keyFingerprint, type ProbeBinding } from '@experiment-doctor/core';
 
 export const CANARY_HELP = `experiment-doctor canary: active ingestion probe, only with your confirmation
 
@@ -70,6 +70,10 @@ export interface CanaryResult {
   steps: { step: string; ok: boolean | null; detail: string; ms?: number }[];
   message: string;
   maxLatencyMs: number;
+  /** What the evidence is about: verify only counts it for the same environment, experiment, flag and event. */
+  binding: ProbeBinding & { sentAt?: string };
+  /** Timestamp of the stored exposure, when read back. */
+  evidenceAt?: string;
 }
 
 interface IdentityFlag {
@@ -207,6 +211,7 @@ async function timed<T>(io: Io, f: () => Promise<T>): Promise<{ value: T; ms: nu
 async function probe(io: Io, p: { envKey: string; envName: string; flag: string; event: string; identity: string; urls: Urls }): Promise<CanaryResult> {
   const steps: CanaryResult['steps'] = [];
   let max = 0;
+  const binding: CanaryResult['binding'] = { envFingerprint: keyFingerprint(p.envKey), flag: p.flag, event: p.event };
   const done = (status: CanaryStatus, message: string): CanaryResult => ({
     status,
     identity: p.identity,
@@ -216,6 +221,7 @@ async function probe(io: Io, p: { envKey: string; envName: string; flag: string;
     steps,
     message,
     maxLatencyMs: max,
+    binding,
   });
   const headers = { 'X-Environment-Key': p.envKey, 'Content-Type': 'application/json; charset=utf-8', 'Flagsmith-SDK-User-Agent': `experiment-doctor-canary/${TOOL_VERSION}` };
 
@@ -243,6 +249,8 @@ async function probe(io: Io, p: { envKey: string; envName: string; flag: string;
 
   // 2. Send one exposure and one conversion, like the SDK's event processor.
   const now = io.now().getTime();
+  if (typeof exp.id === 'number') binding.experimentId = exp.id;
+  binding.sentAt = new Date(now).toISOString();
   const meta = { experiment_id: exp.id ?? null, sdk_version: `experiment-doctor-canary/${TOOL_VERSION}` };
   const events = [
     { event: EXPOSURE_EVENT_NAME, feature_name: p.flag, identifier: p.identity, value: flag.variant, traits: null, metadata: meta, timestamp: now },
@@ -287,9 +295,10 @@ async function readBack(io: Io, store: EventStoreSpec, result: CanaryResult, p: 
       result.message = `${result.message} The event store could not be read (${read.error}), so the result stays ACCEPTED.`;
       return;
     }
-    const verdict = evaluateIdentityEvents(result.identity, read.rows, { flag: p.flag, event: p.event });
+    const verdict = evaluateIdentityEvents(result.identity, read.rows, { flag: p.flag, event: p.event, experimentId: result.binding.experimentId, since: result.binding.sentAt });
     if (verdict.status !== 'PENDING' || io.now().getTime() >= deadline) {
       result.identityLevel = verdict.status !== 'PENDING';
+      if (verdict.exposure) result.evidenceAt = verdict.exposure.at;
       result.steps.push({ step: 'Read back from the event store', ok: verdict.status === 'IDENTITY_VERIFIED' ? true : verdict.status === 'FAILED' ? false : null, detail: `${read.rows.length} event(s) stored for ${result.identity}` });
       if (verdict.status === 'IDENTITY_VERIFIED') {
         result.status = 'VERIFIED';
