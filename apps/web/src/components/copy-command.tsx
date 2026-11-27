@@ -21,18 +21,18 @@ export function CopyCommand({ command, className }: { command: string; className
   return (
     <div
       className={cn(
-        "group flex items-center justify-between gap-3 rounded-[10px] border border-border bg-canvas px-3.5 py-2.5 font-mono text-[13px]",
+        "group flex items-start justify-between gap-3 rounded-[10px] border border-border bg-canvas px-3.5 py-2.5 font-mono text-[13px]",
         className,
       )}
     >
-      <code className="min-w-0 overflow-x-auto whitespace-nowrap text-fg">
+      <code className="min-w-0 break-all py-1.5 leading-[1.5] text-fg">
         <span className="select-none text-fg-muted">$ </span>
         {command}
       </code>
       <button
         type="button"
         onClick={copy}
-        className="relative flex h-8 min-w-14 items-center justify-center rounded-md border border-border px-2 text-[11px] uppercase tracking-[0.08em] text-fg-secondary transition-colors hover:border-border-strong hover:text-fg"
+        className="relative flex h-8 min-w-14 shrink-0 items-center justify-center rounded-md border border-border px-2 text-[11px] uppercase tracking-[0.08em] text-fg-secondary transition-colors hover:border-border-strong hover:text-fg"
         aria-label={copied ? "Copied" : `Copy command: ${command}`}
       >
         <AnimatePresence mode="wait" initial={false}>
