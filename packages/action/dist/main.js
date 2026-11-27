@@ -1205,8 +1205,15 @@ var ed009 = {
     const visible = code.inits.filter((i) => !unknown.includes(i));
     const off = visible.filter((i) => i.enableEvents === null || i.enableEvents === "false");
     const dynamic = visible.filter((i) => i.enableEvents !== null && i.enableEvents !== "true" && i.enableEvents !== "false");
-    if (off.length) {
-      const init = off[0];
+    const expFiles = [...new Set([...code.experimentFlags, ...code.trackEvents, ...code.exposures].map((x) => x.loc.file))];
+    const stem = (p) => p.replace(/\.(?:[mc]?[jt]sx?)$/i, "");
+    const importedBy = (initFile, file) => (code.files.find((f) => f.file === file)?.imports ?? []).some((imp) => imp === stem(initFile) || `${imp}/index` === stem(initFile));
+    const serves = (i) => expFiles.length === 0 || code.inits.length === 1 || expFiles.includes(i.loc.file) || expFiles.some((f) => importedBy(i.loc.file, f));
+    const everyInitOff = unknown.length === 0 && off.length === visible.length;
+    const blamed = off.filter((i) => everyInitOff || serves(i));
+    const excused = off.filter((i) => !blamed.includes(i));
+    if (blamed.length) {
+      const init = blamed[0];
       return fail([
         makeFinding(this, {
           severity: "critical",
@@ -1222,6 +1229,12 @@ var ed009 = {
     if (unknown.length) notes.push(`The SDK options at ${unknown.map((i) => where(i.loc)).join(", ")} are built elsewhere (a spread or a helper), so enableEvents cannot be read: unknown, not missing.`);
     if (dynamic.length) notes.push(`enableEvents is computed at runtime (\`${dynamic[0].enableEvents}\` at ${where(dynamic[0].enableEventsLoc ?? dynamic[0].loc)}); make sure it is true where the experiment runs.`);
     if (notes.length) return skip(notes.join(" "));
+    const on = visible.filter((i) => i.enableEvents === "true");
+    if (excused.length) {
+      return pass(
+        `enableEvents: true is set where the experiment runs (${on.map((i) => where(i.loc)).join(", ")}). ${excused.map((i) => where(i.loc)).join(", ")} has no enableEvents, but no experiment call uses that init, so it is not a defect.`
+      );
+    }
     return pass(`enableEvents: true is set (${code.inits.map((i) => where(i.loc)).join(", ")}).`);
   }
 };
@@ -2202,6 +2215,16 @@ var TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|tests?|e2e|fixtures?|cy
 var BUNDLE_DIR = /(^|\/)(public|vendor|vendors|dist|build|out|static\/js)\//i;
 var BUNDLE_NAME = /\.(min|bundle|umd|prod)\.[mc]?js$/i;
 var SDK_SOURCE = /eventProcessorConfig requires enableEvents|ValueError: enableEvents must be true|this\.getExperimentFlag\s*=\s*function|FLAG_EXPOSURE_EVENT\s*=\s*['"]\$flag_exposure['"]|class EventProcessor\b[\s\S]{0,2000}trackExposureEvent/;
+function resolveRelative(from, spec) {
+  if (!spec.startsWith("./") && !spec.startsWith("../")) return null;
+  const parts = from.split("/").slice(0, -1);
+  for (const seg of spec.split("/")) {
+    if (seg === "." || seg === "") continue;
+    if (seg === "..") parts.pop();
+    else parts.push(seg);
+  }
+  return parts.join("/").replace(/\.(?:[mc]?[jt]sx?)$/i, "");
+}
 function skipReason(path, content) {
   if (TEST_PATH.test(path)) return "test";
   if (BUNDLE_NAME.test(path) || BUNDLE_DIR.test(path) || content.length > MAX_FILE_BYTES) return "bundle";
@@ -2748,7 +2771,10 @@ function scanFiles(input2, options = {}) {
     collectCalls(c, globalConsts, out, globalClients);
     const used = countAll(out) > before || c.imports.some((i) => i.sdk) || c.clients.size > 0;
     if (used) {
-      summaries.push({ file: c.path, runtime: classify(c, used), usesFlagsmith: true });
+      const summary = { file: c.path, runtime: classify(c, used), usesFlagsmith: true };
+      const local = c.imports.map((i) => resolveRelative(c.path, i.spec)).filter((p) => p !== null);
+      if (local.length) summary.imports = [...new Set(local)].sort();
+      summaries.push(summary);
     } else {
       out.exits = out.exits.filter((e) => e.loc.file !== c.path);
     }
