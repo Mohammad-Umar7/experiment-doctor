@@ -141,7 +141,7 @@ export function runGate(
 
 export function summaryMarkdown(result: GateResult, head: Report): string {
   const lines: string[] = [];
-  lines.push(`## Experiment Doctor CI Gate: ${result.failing ? "❌ blocked" : "✅ passed"}`);
+  lines.push(`## Experiment Doctor CI Gate: ${result.failing ? "❌ failed" : "✅ passed"}`);
   lines.push("");
   lines.push(
     result.failing

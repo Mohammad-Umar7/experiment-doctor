@@ -2754,7 +2754,7 @@ function runGate(base, head, code, config) {
 }
 function summaryMarkdown(result, head) {
   const lines = [];
-  lines.push(`## Experiment Doctor CI Gate: ${result.failing ? "\u274C blocked" : "\u2705 passed"}`);
+  lines.push(`## Experiment Doctor CI Gate: ${result.failing ? "\u274C failed" : "\u2705 passed"}`);
   lines.push("");
   lines.push(
     result.failing ? "This pull request introduces a change that would make the experiment stop counting. Nothing else in the build would catch it: SDKs skip events silently." : "No new experiment regressions in this pull request."

@@ -98,7 +98,7 @@ await flagsmith.identify(user.id);`,
     const head = analyse(HEALTHY.replace('trackEvent("purchase")', 'trackEvent("Purchase")'));
     const result = runGate(base.report, head.report, { base: base.code, head: head.code }, gateConfig);
     const md = summaryMarkdown(result, head.report);
-    expect(md).toContain("blocked");
+    expect(md).toContain("failed");
     expect(md).toContain("`purchase`");
   });
 });
