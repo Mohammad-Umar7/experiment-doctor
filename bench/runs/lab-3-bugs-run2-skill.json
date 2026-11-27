@@ -1,0 +1,15 @@
+{
+  "case": "lab-3-bugs-run2",
+  "arm": "skill",
+  "model": "claude-sonnet-5-5",
+  "duration_ms": 182474,
+  "num_turns": 25,
+  "total_cost_usd": 0.3593746,
+  "usage": {
+    "input_tokens": 22,
+    "cache_creation_input_tokens": 55098,
+    "cache_read_input_tokens": 748386,
+    "output_tokens": 6410
+  },
+  "final_answer": "I found three root causes. I fixed the two in the code, and the third is in Flagsmith, so I haven't touched it. I re-ran `experiment-doctor check` afterwards. The code findings are gone, and the missing variation key is the only defect left.\n\n**Root causes**\n1. **Config, not fixed:** variation 1 of `checkout_button` (`one_click`) has no `key`, so Flagsmith drops its exposures and that arm looks empty.\n2. **Code, fixed:** `src/checkout.js:12` sent `trackEvent(\"Purchase\")`, but the metric event is `purchase`. Event names are case-sensitive, so every conversion was ignored. It now sends `\"purchase\"`.\n3. **Code, fixed:** `src/experiment.js` set no `api` or `eventsApiUrl`, so the SDK talked to Flagsmith Cloud instead of your self-hosted instance at `htt<path>`. `init` now sets `api` to `<origin>/api/v1/` and `eventProcessorConfig.eventsApiUrl` to `<origin>/api/`. The origin comes from `VITE_FLAGSMITH_ORIGIN` and falls back to `htt<path>`.\n\n**The config command I would run (not run)**\n```\nflagsmith feature variant update checkout_button 1 --key one_click\n```\n- **Experiment must be completed first:** the flag is locked while the experiment runs. So you'd complete \"One-click checkout\", add the key, then create and start a new experiment. Completing and restarting changes a running experiment, so that needs your explicit approval.\n- **Allowlist:** `experiment-doctor fix` refuses Flagsmith changes unless the environment is allowlisted. That's `--allow-env Lab` or `.experiment-doctor.json`, and I haven't added either.\n\n**Ruled out**\n- The warehouse is connected and has received events.\n- The experiment is running with a 50% allocation for `one_click` at 100% rollout.\n- The SDK is 12.6.0, `enableEvents` is on, and `identify` is awaited before the flag is read.\n- The exposure goes through `getExperimentFlag`, and `flushEvents` runs on `pagehide`.\n- The feature-level weight of 0 on the variation isn't a cause, because the experiment's own allocation overrides it.\n\nResults haven't been computed yet. That is pending, not a defect. After the variation key is fixed and traffic flows, refresh results, and `experiment-doctor verify` can confirm.\n\nI haven't committed anything."
+}

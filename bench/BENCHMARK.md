@@ -68,14 +68,17 @@ The self-hosted rescue lab (`selfhost/`): real Flagsmith with Experimentation, r
 
 > *Our A/B test on the checkout_button flag runs on our self-hosted Flagsmith, and it is useless: the one_click arm looks empty in the results and conversions stay at zero. The Flagsmith CLI is already configured for this instance (flagsmith.json in this folder and environment variables). Find every root cause, in the code and in the Flagsmith configuration. Fix code problems directly, you have my approval. Do NOT change anything in Flagsmith itself: for config problems, give the exact command you would run. Finish with the root causes, one line each.*
 
-| | Doctor | Plain |
-| --- | --- | --- |
-| ED-001 variation without key | ✅ found, exact `flagsmith feature variant update ...` command, noted the flag is locked while the experiment runs | ❌ "no Flagsmith configuration problem" |
-| ED-004 `Purchase` vs `purchase` | ✅ fixed | ❌ said the metric matches `Purchase` (it read the metric's display name, not its event) |
-| ED-006 events sent to Cloud | ✅ fixed (`api` + `eventsApiUrl`) | ✅ fixed |
-| Unrequested changes | none | several refactors (idempotent init, throw on missing env var, conversion only on HTTP 200) |
-| Time / turns / cost | **85.1 s / 25 / $0.334** | 329.4 s / 57 / $0.852 |
-| Tokens | **895,338** | 2,662,531 |
+Run twice per arm. Run 2 ran both arms at the same time, so its wall times are slower.
+
+| | Doctor run 1 | Doctor run 2 | Plain run 1 | Plain run 2 |
+| --- | --- | --- | --- | --- |
+| ED-001 variation without key | ✅ found + exact command, noted the flag is locked | ✅ found, left untouched | ❌ "no Flagsmith configuration problem" | ❌ missed; proposed re-weighting `one_click` on the running, locked experiment instead |
+| ED-004 `Purchase` vs `purchase` | ✅ fixed | ✅ fixed | ❌ said the metric matches `Purchase` (read the metric's display name, not its event) | ❌ same mistake |
+| ED-006 events sent to Cloud | ✅ fixed (`api` + `eventsApiUrl`) | ✅ fixed (`api` + `eventsApiUrl`) | ✅ fixed | ⚠️ half: added `api` only, events still go to Cloud |
+| Unrequested changes | none | none | several refactors | an extra flush |
+| **Root causes fixed** | **3/3** | **3/3** | 1/3 | 0/3 (1 partial) |
+| Time / turns / cost | 85.1 s / 25 / $0.334 | 182.5 s / 25 / $0.359 | 329.4 s / 57 / $0.852 | 251.8 s / 31 / $0.643 |
+| Tokens | 895,338 | 809,916 | 2,662,531 | 2,201,196 |
 
 ## What we take from it
 
@@ -88,9 +91,9 @@ The self-hosted rescue lab (`selfhost/`): real Flagsmith with Experimentation, r
   - a metric's name is not its event.
 
   The plain agent missed or misapplied every one of these.
-- On the realistic multi-bug case the Doctor found 3/3 in a quarter of the time, at less than half the cost, and changed only what was needed.
+- On the realistic multi-bug case the Doctor found 3/3 in both runs; plain Claude Code fixed 1/3 and then 0/3, made the same metric-name mistake twice, and once proposed a harmful config change. The Doctor was also cheaper ($0.33 to $0.36 vs $0.64 to $0.85).
 
-Small sample: one run per arm per case. Re-run with the commands below to check.
+Small sample: one run per arm per case in suites 1 to 3, two in suite 4. Re-run with the commands below to check.
 
 ## Reproduce
 
