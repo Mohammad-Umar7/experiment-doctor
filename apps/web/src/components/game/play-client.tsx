@@ -349,7 +349,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
             {source === "flagsmith" || flagsmithConfigured
               ? "Hint style assigned by a live Flagsmith experiment (doctor_hint_style)."
               : "Flagsmith is not configured here, so the hint style uses a local 50/50 split."}{" "}
-            Your repair is checked on the server by simulating the Flagsmith SDK on your code. Nothing you type is executed.
+            Repairs are statically verified: the server parses your code and replays the Flagsmith SDK call order (init, identify, exposure, conversion, flush). Nothing you type is executed. For a live pipeline check, the CLI and the self-hosted lab verify real events per identity.
           </p>
         </aside>
       </div>
@@ -376,7 +376,7 @@ function Intro({
       <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em]">Restore the missing conversions.</h2>
       <ul className="mt-4 space-y-1.5 text-[13.5px] leading-[1.55] text-fg-secondary">
         <li>· 3 minutes. The server keeps the clock.</li>
-        <li>· Edit the code, then verify. Verify as often as you like.</li>
+        <li>· Edit the code, then verify. The server checks the SDK call order statically, it never runs your code.</li>
         <li>· One hint from the Doctor if you get stuck.</li>
         <li>
           · Doctor&apos;s record: <span className="font-mono text-healthy">{DOCTOR_RECORD.time}</span>

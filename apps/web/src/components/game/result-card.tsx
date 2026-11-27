@@ -81,7 +81,7 @@ export function SuccessCard({
       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-healthy">Experiment revived</p>
       <p className="mt-3 font-mono text-[44px] font-medium leading-none tabular text-fg">{time}</p>
       <p className="mt-2 text-[14px] text-fg-secondary">
-        {caseTitle} · verified by the server ·{" "}
+        {caseTitle} · statically verified on the server ·{" "}
         {beat ? (
           <span className="text-healthy">you beat the Doctor by {formatMs(-diff)}</span>
         ) : (
