@@ -37,3 +37,6 @@ doctor-report*.json
 
 # the GitHub Action runs from its committed bundle
 !packages/action/dist/
+
+# packed CLI tarballs (attached to GitHub releases instead)
+*.tgz
