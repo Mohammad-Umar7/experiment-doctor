@@ -1,0 +1,7 @@
+{
+  "$comment": "Experiment Doctor config. The CI Gate scans these paths and checks them against this experiment.",
+  "flag": "checkout_button",
+  "variants": ["one_click"],
+  "metrics": ["purchase"],
+  "paths": ["demo/checkout-app"]
+}
