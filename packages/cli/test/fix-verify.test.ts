@@ -13,7 +13,7 @@ describe('fix', () => {
     expect(await main(['fix'], io)).toBe(0);
     expect(io.out()).toContain("-   flagsmith.trackEvent('Purchase');");
     expect(io.out()).toContain("+   flagsmith.trackEvent('purchase');");
-    expect(io.out()).toContain('Apply this change to src/flags.ts? [y/N]');
+    expect(io.err()).toContain('Apply this change to src/flags.ts? [y/N]');
     expect(io.out()).toContain('Not applied');
     expect(read(dir)).toContain("trackEvent('Purchase')");
   });
@@ -66,7 +66,7 @@ describe('fix', () => {
     const io = fakeIo({ cwd: dir, flagsmith: state, answers: ['y'] });
     expect(await main(['fix'], io)).toBe(0);
     expect(io.out()).toContain('flagsmith api api/v1/environments/<env-key>/experiments/42/start/ -X POST');
-    expect(io.out()).toContain('Run this against environment "Staging"? [y/N]');
+    expect(io.err()).toContain('Run this against environment "Staging"? [y/N]');
     expect(io.out()).not.toContain(ENV_KEY);
     expect(io.calls.at(-1)!.args).toEqual(['api', `api/v1/environments/${ENV_KEY}/experiments/42/start/`, '-X', 'POST']);
   });

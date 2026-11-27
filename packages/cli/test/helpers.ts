@@ -34,7 +34,7 @@ export function fakeIo(opts: FakeOptions): FakeIo {
     stdout: { write: (s: string) => (stdout += s), isTTY: false },
     stderr: { write: (s: string) => (stderr += s), isTTY: false },
     prompt: async (q: string) => {
-      stdout += q;
+      stderr += q; // like the real prompt, questions go to stderr
       return answers.shift() ?? '';
     },
     fetch: (async (url: string, init?: RequestInit) => {
