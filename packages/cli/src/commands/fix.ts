@@ -6,15 +6,16 @@ import type { Io } from '../io';
 import { applyPatch, renderDiff } from '../patch';
 import { renderFinding } from '../render';
 import { authorizeMutation, loadPolicy, POLICY_FILE, splitCommand } from '../safety';
-import { saveState } from '../state';
-import { performCheck } from './check';
+import { loadState, saveState, STATE_DIR, type SavedReport } from '../state';
+import { performCheck, stateRoot } from './check';
 
 export const FIX_HELP = `experiment-doctor fix: apply the primary finding's fix, with your approval
 
 Usage: experiment-doctor fix [options]
 
   --finding <ED-xxx>      fix this finding instead of the primary one
-  --yes                   approve without the y/N prompt (you already reviewed it)
+  --yes                   apply exactly the change the last check showed, without the y/N
+                          prompt (refused if a fresh diagnosis would apply anything else)
   --dry-run               show the change and stop
   --allow-env <key|name>  allowlist an environment for Flagsmith changes (repeatable);
                           or list it under "allowMutations" in ${POLICY_FILE}
@@ -49,12 +50,15 @@ export async function fixCommand(io: Io, argv: string[]): Promise<number> {
   const out = (s: string) => {
     if (!values.json) io.stdout.write(`${s}\n`);
   };
+  // --yes means "apply what the last check showed": keep that report as the baseline and bind to it.
+  const baseline = values.yes ? loadState<SavedReport>(stateRoot(io, { dir: values.dir, evidence: values.evidence }), 'last-report.json') : null;
   const run = await performCheck(io, {
     flag: values.flag,
     experiment: experimentId(values.experiment),
     dir: values.dir,
     evidence: values.evidence,
     environment: values.environment,
+    save: !values.yes,
   });
   const secrets = run.envKey ? [run.envKey] : [];
   const finish = (o: FixOutcome, code: number) => {
@@ -74,6 +78,11 @@ export async function fixCommand(io: Io, argv: string[]): Promise<number> {
   }
   if (!finding || finding.kind === 'pending') {
     return finish({ finding: finding?.id ?? null, action: 'nothing', message: finding ? `${finding.id} is pending data, not a defect: nothing to fix. Run experiment-doctor verify later.` : `Nothing to fix: ${run.report.summary}` }, 0);
+  }
+
+  if (values.yes) {
+    const refusal = bindingRefusal(baseline, finding, values.finding, secrets);
+    if (refusal) return finish({ finding: finding.id, action: 'refused', message: refusal }, 3);
   }
 
   out(`\n${renderFinding(redactDeep(finding, secrets), c, false)}\n`);
@@ -122,4 +131,29 @@ export async function fixCommand(io: Io, argv: string[]): Promise<number> {
 
   out(`\n  ${c.secondary('Fix')}\n  ${finding.fix.summary}${(finding.fix.steps ?? []).map((s) => `\n  · ${s}`).join('')}${command ? `\n  ${c.accent('$')} ${command.command}` : ''}`);
   return finish({ finding: finding.id, action: 'manual', message: 'No automatic change for this finding. Apply it by hand, then run experiment-doctor verify.' }, 0);
+}
+
+/**
+ * `fix --yes` may only apply the change the human saw in the last check: same
+ * finding, same patch (file, line, before, after) or same flagsmith command.
+ * Returns why it refuses, or null when the fresh diagnosis matches.
+ */
+export function bindingRefusal(baseline: SavedReport | null, finding: Finding, requested: string | undefined, secrets: string[]): string | null {
+  const rerun = 'Nothing was written. Run experiment-doctor check, review the change, then fix --yes (or drop --yes to review it here).';
+  if (!baseline?.report) return `--yes only applies the change shown by the last check, and there is no ${STATE_DIR}/last-report.json. ${rerun}`;
+  const saved = requested ? baseline.report.findings.find((f) => f.id === requested.toUpperCase()) : baseline.report.primaryFinding;
+  if (!saved || saved.id !== finding.id) {
+    return `The finding to fix changed since the last check (${saved?.id ?? 'none'} then, ${finding.id} now). ${rerun}`;
+  }
+  // The saved report is redacted; compare like with like.
+  const fresh = redactDeep({ patch: finding.fix.patch ?? null, command: finding.fix.command ? { command: finding.fix.command.command, input: finding.fix.command.input ?? null } : null }, secrets);
+  const shown = { patch: saved.fix.patch ?? null, command: saved.fix.command ? { command: saved.fix.command.command, input: saved.fix.command.input ?? null } : null };
+  if (JSON.stringify(fresh.patch) !== JSON.stringify(shown.patch)) {
+    const where = fresh.patch ? `${fresh.patch.file}:${fresh.patch.line}` : 'no patch';
+    return `The patch fix would apply (${where}) differs from the one the last check showed (${shown.patch ? `${shown.patch.file}:${shown.patch.line}` : 'no patch'}). ${rerun}`;
+  }
+  if (JSON.stringify(fresh.command) !== JSON.stringify(shown.command)) {
+    return `The flagsmith command fix would run differs from the one the last check showed. ${rerun}`;
+  }
+  return null;
 }
