@@ -9,6 +9,7 @@ import { buildContext } from '../src/rules/context';
 import { ed002 } from '../src/rules/ed002-no-identify';
 import { ed003 } from '../src/rules/ed003-identity-mismatch';
 import { ed006 } from '../src/rules/ed006-events-endpoint';
+import { ed009 } from '../src/rules/ed009-enable-events';
 import { scanFiles, skipReason, type SourceFile } from '../src/scanner/scan';
 import type { Evidence } from '../src/types';
 
@@ -199,5 +200,60 @@ export const Root = () => (
     const out = ed002.run(buildContext(ev));
     expect(out.status).toBe('skip');
     expect(diagnose(ev).verdict).not.toBe('REPAIR_REQUIRED');
+  });
+});
+
+describe('5) several entry points, each with its own init', () => {
+  const experimentPage = `import flagsmith from '@flagsmith/flagsmith';
+await flagsmith.init({ environmentID: ENV, api: API, cacheFlags: false, enableEvents: true });
+await flagsmith.identify(visitor());
+const flag = flagsmith.getExperimentFlag('hero_copy');
+document.querySelector('#cta').addEventListener('click', async () => {
+  flagsmith.trackEvent('signup');
+  await flagsmith.flushEvents();
+});
+`;
+  const plainPage = `import flagsmith from '@flagsmith/flagsmith';
+await flagsmith.init({ environmentID: ENV, api: API, cacheFlags: false, enableAnalytics: false });
+if (flagsmith.hasFeature('new_footer')) document.body.classList.add('new-footer');
+`;
+  const files = (plain = plainPage, exp = experimentPage): SourceFile[] => [
+    { path: 'package.json', content: pkg('site') },
+    { path: 'src/experiment-page.js', content: exp },
+    { path: 'src/plain-page.js', content: plain },
+  ];
+
+  it('an init on a page with no experiment calls is not blamed', () => {
+    const ev = codeOnly(files());
+    expect(ev.code!.inits).toHaveLength(2);
+    const out = ed009.run(buildContext(ev));
+    expect(out.status).toBe('pass');
+    expect(out.note).toMatch(/src\/plain-page\.js:2 has no enableEvents, but no experiment call uses that init/);
+    expect(diagnose(ev).findings.filter((f) => f.id === 'ED-009')).toHaveLength(0);
+  });
+
+  it('still blames the init that sits with the experiment calls', () => {
+    const ev = codeOnly(files(plainPage.replace('enableAnalytics: false', 'enableEvents: true'), experimentPage.replace('enableEvents: true', 'enableAnalytics: true')));
+    const out = ed009.run(buildContext(ev));
+    expect(out.status).toBe('fail');
+    expect(out.findings![0]!.evidence[0]!.location).toMatchObject({ file: 'src/experiment-page.js', line: 2 });
+  });
+
+  it('blames an init in a module the experiment file imports', () => {
+    const ev = codeOnly([
+      { path: 'package.json', content: pkg('site') },
+      { path: 'src/lib/flags.js', content: `import flagsmith from '@flagsmith/flagsmith';\nexport const ready = flagsmith.init({ environmentID: ENV });\nexport default flagsmith;` },
+      { path: 'src/pages/checkout.js', content: `import flagsmith from '../lib/flags.js';\nawait flagsmith.identify(visitor());\nflagsmith.getExperimentFlag('hero_copy');\nflagsmith.trackEvent('signup');` },
+      { path: 'src/pages/admin.js', content: `import flagsmith from '@flagsmith/flagsmith';\nawait flagsmith.init({ environmentID: ENV, enableEvents: true });\nflagsmith.hasFeature('x');` },
+    ]);
+    expect(ev.code!.files.find((f) => f.file === 'src/pages/checkout.js')!.imports).toEqual(['src/lib/flags']);
+    const out = ed009.run(buildContext(ev));
+    expect(out.status).toBe('fail');
+    expect(out.findings![0]!.evidence[0]!.location!.file).toBe('src/lib/flags.js');
+  });
+
+  it('blames when every init lacks enableEvents', () => {
+    const ev = codeOnly(files(plainPage, experimentPage.replace('enableEvents: true', 'cacheFlags: true')));
+    expect(ed009.run(buildContext(ev)).status).toBe('fail');
   });
 });
