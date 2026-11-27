@@ -1,0 +1,5 @@
+{
+  "project": 1,
+  "environment": "Development",
+  "apiUrl": "http://localhost:8000"
+}
