@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { DOCTOR_RECORD } from "@/lib/doctor-record";
@@ -33,6 +33,12 @@ export function SuccessCard({
   const [claimState, setClaimState] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [claimed, setClaimed] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    cardRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  }, []);
 
   const diff = elapsedMs - DOCTOR_RECORD.ms;
   const beat = diff < 0;
@@ -64,10 +70,11 @@ export function SuccessCard({
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: ease.smooth }}
-      className="rounded-[var(--radius-card)] border border-healthy/30 bg-surface p-6 shadow-[var(--shadow-healthy)]"
+      className="scroll-mt-24 rounded-[var(--radius-card)] border border-healthy/30 bg-surface p-6 shadow-[var(--shadow-healthy)]"
       role="status"
       aria-live="polite"
     >
