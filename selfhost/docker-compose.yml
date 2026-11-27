@@ -1,0 +1,77 @@
+# Experiment Doctor rescue lab: self-hosted Flagsmith with Experimentation on, events stored in
+# its own PostgreSQL, seeded with a broken checkout experiment the Doctor can diagnose, repair
+# and verify at identity level.
+#
+#   docker compose -f selfhost/docker-compose.yml up -d
+#   node selfhost/seed.mjs            # creates org, project, flag, metric, experiment
+#   node selfhost/lab.mjs broken      # sends traffic from the broken app
+#   npx experiment-doctor check ...   # diagnose, then fix, then:
+#   node selfhost/lab.mjs fixed && node selfhost/verify-events.mjs <identity>
+#
+# Based on Flagsmith's official docker-compose.yml. Local use only: change every secret
+# before exposing this anywhere.
+
+x-flagsmith-env: &flagsmith-env
+  DATABASE_URL: postgresql://postgres:password@postgres:5432/flagsmith
+  USE_POSTGRES_FOR_ANALYTICS: "true"
+  ENVIRONMENT: production
+  DJANGO_ALLOWED_HOSTS: "*"
+  FLAGSMITH_DOMAIN: localhost:8000
+  DJANGO_SECRET_KEY: local-lab-secret-change-me
+  WAREHOUSE_CREDENTIALS_SECRET: local-lab-secret-change-me
+  TASK_RUN_METHOD: TASK_PROCESSOR
+  EXPERIMENTATION_ENABLED: "true"
+
+volumes:
+  pgdata:
+
+services:
+  postgres:
+    image: postgres:15.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flagsmith
+    ports:
+      - "5433:5432" # exposed so verify-events.mjs can read the event store
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d flagsmith -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 20s
+
+  migrate-db:
+    image: docker.flagsmith.com/flagsmith/flagsmith:latest
+    command: [migrate]
+    environment:
+      <<: *flagsmith-env
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  flagsmith:
+    image: docker.flagsmith.com/flagsmith/flagsmith:latest
+    restart: unless-stopped
+    command: [serve]
+    environment:
+      <<: *flagsmith-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate-db:
+        condition: service_completed_successfully
+
+  flagsmith-task-processor:
+    image: docker.flagsmith.com/flagsmith/flagsmith:latest
+    restart: unless-stopped
+    command: [run-task-processor]
+    environment:
+      <<: *flagsmith-env
+    depends_on:
+      migrate-db:
+        condition: service_completed_successfully
