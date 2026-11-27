@@ -284,7 +284,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25, ease: ease.smooth }}
-                  className="absolute inset-0 top-[41px] flex items-center justify-center bg-canvas/75 p-4 backdrop-blur-[3px]"
+                  className="absolute inset-0 top-[41px] z-30 flex items-center justify-center bg-canvas/80 p-4 backdrop-blur-[3px]"
                 >
                   <Intro
                     game={game}
