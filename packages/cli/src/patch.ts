@@ -1,17 +1,32 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { redactSecrets, type Patch } from '@experiment-doctor/core';
 import type { Palette } from './color';
 
 export type ApplyResult = { ok: true; path: string } | { ok: false; reason: string };
 
-/** Resolves the patch file inside `root`, refusing anything that escapes it. */
-export function patchPath(root: string, patch: Patch): string | null {
-  if (isAbsolute(patch.file)) return null;
+/**
+ * Resolves the patch target inside `root`. Both sides go through realpath, so
+ * a symlink or junction that points outside the scan root is refused too.
+ */
+export function patchPath(root: string, patch: Patch): ApplyResult {
+  if (!patch.file || isAbsolute(patch.file) || patch.file.includes('\0')) return { ok: false, reason: `Refusing an absolute or invalid patch path: ${patch.file}` };
   const full = resolve(root, patch.file);
-  const rel = relative(root, full);
-  if (rel.startsWith('..') || isAbsolute(rel)) return null;
-  return full;
+  if (!existsSync(full)) return { ok: false, reason: `${patch.file} does not exist.` };
+  let realRoot: string;
+  let realFile: string;
+  try {
+    realRoot = realpathSync(root);
+    realFile = realpathSync(full);
+  } catch {
+    return { ok: false, reason: `Cannot resolve ${patch.file}.` };
+  }
+  const rel = relative(realRoot, realFile);
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) {
+    return { ok: false, reason: `Refusing to write outside the scanned folder: ${patch.file} resolves to ${realFile}.` };
+  }
+  if (!statSync(realFile).isFile()) return { ok: false, reason: `${patch.file} is not a regular file.` };
+  return { ok: true, path: realFile };
 }
 
 /**
@@ -19,9 +34,9 @@ export function patchPath(root: string, patch: Patch): string | null {
  * `line`. Keeps the file's line endings.
  */
 export function applyPatch(root: string, patch: Patch): ApplyResult {
-  const path = patchPath(root, patch);
-  if (!path) return { ok: false, reason: `Refusing to write outside ${root}: ${patch.file}` };
-  if (!existsSync(path)) return { ok: false, reason: `${patch.file} does not exist.` };
+  const target = patchPath(root, patch);
+  if (!target.ok) return target;
+  const path = target.path;
   const text = readFileSync(path, 'utf8');
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
