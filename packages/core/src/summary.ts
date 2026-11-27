@@ -30,7 +30,7 @@ export function nextStep(report: Report): string {
     case 'UNVERIFIABLE':
       if (!report.coverage.config) return 'collect Flagsmith evidence (flagsmith login, then experiment-doctor check)';
       if (!report.coverage.code) return 'scan the app: experiment-doctor check --dir <app>';
-      return 'experiment-doctor canary --environment <test env> (optional active probe)';
+      return 'experiment-doctor canary --environment <test env> --allow-env <test env> (optional ingestion probe)';
   }
 }
 
