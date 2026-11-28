@@ -9,21 +9,20 @@ const DOCTOR_001 = doctorRecordFor("001");
 export function ChallengeTeaser() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto grid max-w-[1280px] items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-2">
-        <Reveal>
+      <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-2">
+        <Reveal className="min-w-0">
           <Eyebrow>Human vs Doctor</Eyebrow>
           <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">Beat the machine.</h2>
           <p className="mt-3 max-w-[520px] text-[15px] leading-[1.6] text-fg-secondary">
-            A real broken experiment, a code editor and three minutes. The Doctor repaired it in{" "}
-            <span className="font-mono text-fg">{DOCTOR_001.time}</span>. Your repair is verified by the server, not by a
-            button click, and the fastest humans go on the board.
+            A broken experiment, a code editor and three minutes. The Doctor fixed this one in{" "}
+            <span className="font-mono text-fg">{DOCTOR_001.time}</span>. The server checks your fix, and the fastest humans go
+            on the board.
           </p>
           <div className="mt-6 rounded-[var(--radius-card)] border border-accent/30 bg-accent/[0.06] p-4 text-[13px] leading-[1.6] text-fg-secondary">
             <p className="font-medium text-fg">This game is a Flagsmith experiment.</p>
             <p className="mt-1">
-              Half the players get a full diagnostic report as their hint, the other half get one prioritized fix. The flag{" "}
-              <code className="font-mono text-[12px] text-fg">doctor_hint_style</code> decides, and Flagsmith measures which
-              one gets more people to a verified repair within 180 seconds.
+              Half the players get a full report as their hint, half get one fix. Flagsmith measures which one helps more people
+              finish in time.
             </p>
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -36,7 +35,7 @@ export function ChallengeTeaser() {
           </div>
         </Reveal>
 
-        <Reveal delay={0.08}>
+        <Reveal delay={0.08} className="min-w-0">
           <Panel className="overflow-hidden shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-muted">Case 001 / missing conversions</p>
