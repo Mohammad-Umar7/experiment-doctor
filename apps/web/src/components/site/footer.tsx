@@ -17,10 +17,10 @@ export function Footer() {
             Play
           </Link>
           <Link className="hover:text-fg" href="/rescue">
-            Rescue Center
+            Live A/B test
           </Link>
           <Link className="hover:text-fg" href="/report">
-            Report viewer
+            Check your code
           </Link>
           <a className="hover:text-fg" href={REPO_URL} target="_blank" rel="noreferrer">
             Source on GitHub
