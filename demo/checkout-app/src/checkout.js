@@ -5,7 +5,7 @@ export async function mountCheckout(user, root) {
   await startExperiment(user);
 
   const button = document.createElement("button");
-  button.textContent = checkoutButtonVariant() === "one_click" ? "Buy now" : "Proceed to checkout";
+  button.textContent = checkoutButtonVariant() === "one_click" ? "Buy now in one click" : "Proceed to checkout";
   button.addEventListener("click", async () => {
     await placeOrder();
     // Conversion for the checkout_button experiment
