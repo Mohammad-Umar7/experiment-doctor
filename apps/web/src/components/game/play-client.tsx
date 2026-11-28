@@ -8,6 +8,8 @@ import { HintPanel } from "@/components/game/hint-panel";
 import { RaceTimer } from "@/components/game/race-timer";
 import { SuccessCard, TimeoutCard } from "@/components/game/result-card";
 import { VerifyButton } from "@/components/game/verify-button";
+import { Tour } from "@/components/onboarding/tour";
+import { PLAY_TOUR, PLAY_TOUR_LABEL } from "@/components/onboarding/play-tour";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -19,6 +21,7 @@ import { doctorRecordFor } from "@/lib/doctor-record";
 import { ease } from "@/lib/motion";
 import { sounds, setSoundEnabled, soundEnabled } from "@/lib/sound";
 import { CHALLENGE_LIMIT_MS, type HintVariant } from "@/lib/site";
+import { OPEN_GUIDE_EVENT, PLAY_TOUR_KEY, markSeen, seen } from "@/lib/onboarding";
 import { useResurrection } from "@/lib/use-resurrection";
 
 type Phase = "intro" | "starting" | "playing" | "verifying" | "reviving" | "won" | "timeout";
@@ -55,6 +58,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
   const [revealBug, setRevealBug] = useState(false);
   const [sound, setSound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touring, setTouring] = useState(false);
   const pidRef = useRef<string>("");
 
   const step = useResurrection(phase === "reviving" || phase === "won", () => setPhase("won"));
@@ -64,6 +68,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
     pidRef.current = getPlayerId();
     void prepare(pidRef.current);
     setSound(soundEnabled());
+    if (!seen(PLAY_TOUR_KEY)) setTouring(true);
     if (!initialCaseId) {
       const next = pickCase();
       setGame(next);
@@ -71,6 +76,17 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
       setBrokenStage(next.brokenStage);
     }
   }, [initialCaseId]);
+
+  useEffect(() => {
+    const onGuide = () => setTouring(true);
+    window.addEventListener(OPEN_GUIDE_EVENT, onGuide);
+    return () => window.removeEventListener(OPEN_GUIDE_EVENT, onGuide);
+  }, []);
+
+  const endTour = useCallback(() => {
+    markSeen(PLAY_TOUR_KEY);
+    setTouring(false);
+  }, []);
 
   const begin = useCallback(
     async (practice: boolean, nextGame: GameCase = game) => {
@@ -203,7 +219,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
           </Eyebrow>
           <h1 className="mt-1.5 text-[26px] font-semibold tracking-[-0.03em] sm:text-[32px]">{game.title}</h1>
         </div>
-        <div className="flex items-end gap-6 sm:gap-8">
+        <div className="flex items-end gap-6 sm:gap-8" data-tour="clock">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted">Your time remaining</p>
             <RaceTimer
@@ -245,14 +261,14 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* left: case + editor */}
         <div className="min-w-0 space-y-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-4" data-tour="symptom">
             <p className="max-w-[640px] text-[14px] leading-[1.6] text-fg-secondary">{game.symptom}</p>
             <StatusPill status={done ? "healthy" : "critical"} pulse={!done} className="shrink-0">
               {done ? "Healthy" : "Unhealthy"}
             </StatusPill>
           </div>
 
-          <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-border">
+          <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-border" data-tour="code">
             <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-2.5">
               <div className="flex items-center gap-2 font-mono text-[12px]">
                 <span className="text-fg">{game.file}</span>
@@ -280,7 +296,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
 
             {/* intro overlay */}
             <AnimatePresence>
-              {(phase === "intro" || phase === "starting") && (
+              {(phase === "intro" || phase === "starting") && !touring && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -294,6 +310,7 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
                     error={error}
                     onStart={() => begin(false)}
                     onPractice={() => begin(true)}
+                    onTour={() => setTouring(true)}
                   />
                 </motion.div>
               )}
@@ -340,23 +357,37 @@ export function PlayClient({ initialCaseId }: { initialCaseId?: string }) {
               onPlayAgain={playAgain}
             />
           )}
-          <EvidencePanel game={game} brokenStage={brokenStage} step={step} />
+          <div data-tour="evidence">
+            <EvidencePanel game={game} brokenStage={brokenStage} step={step} />
+          </div>
           {!done && (
             <>
-              <HintPanel game={game} variant={variant} open={hintOpen} onOpen={openHint} disabled={!playing} />
-              <div className="sticky bottom-3 z-20 lg:static">
+              <div data-tour="hint">
+                <HintPanel game={game} variant={variant} open={hintOpen} onOpen={openHint} disabled={!playing} />
+              </div>
+              <div className="sticky bottom-3 z-20 lg:static" data-tour="verify">
                 <VerifyButton onClick={verify} verifying={phase === "verifying"} disabled={!playing} />
               </div>
             </>
           )}
-          <p className="text-[11.5px] leading-[1.55] text-fg-muted">
-            {source === "flagsmith" || flagsmithConfigured
-              ? "Hint style assigned by a live Flagsmith experiment (doctor_hint_style)."
-              : "Flagsmith is not configured here, so the hint style uses a local 50/50 split."}{" "}
-            Repairs are statically verified: the server parses your code and replays the Flagsmith SDK call order (init, identify, exposure, conversion, flush). Nothing you type is executed. For a live pipeline check, the CLI and the self-hosted lab verify real events per identity.
-          </p>
+          <details className="group text-[12px] leading-[1.55] text-fg-muted">
+            <summary className="cursor-pointer list-none select-none hover:text-fg-secondary">
+              <span className="mr-1 inline-block transition-transform group-open:rotate-90" aria-hidden>
+                ›
+              </span>
+              How is my fix checked?
+            </summary>
+            <p className="mt-2">
+              {source === "flagsmith" || flagsmithConfigured
+                ? "Your hint style comes from a live Flagsmith experiment (doctor_hint_style)."
+                : "Flagsmith is not configured here, so the hint style uses a local 50/50 split."}{" "}
+              The server parses your code and replays the Flagsmith SDK call order: init, identify, exposure, conversion,
+              flush. Nothing you type is executed. For real events per identity, use the CLI or the self-hosted lab.
+            </p>
+          </details>
         </aside>
       </div>
+      <Tour steps={PLAY_TOUR} open={touring} onClose={endTour} label={PLAY_TOUR_LABEL} />
     </div>
   );
 }
@@ -367,16 +398,23 @@ function Intro({
   error,
   onStart,
   onPractice,
+  onTour,
 }: {
   game: GameCase;
   starting: boolean;
   error: string | null;
   onStart: () => void;
   onPractice: () => void;
+  onTour: () => void;
 }) {
   return (
     <div className="w-full max-w-[460px] rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-critical">Incoming case {game.id}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-critical">Incoming case {game.id}</p>
+        <button type="button" onClick={onTour} className="text-[12px] text-fg-muted underline-offset-4 hover:text-fg hover:underline">
+          How to play
+        </button>
+      </div>
       <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em]">Restore the missing conversions.</h2>
       <ul className="mt-4 space-y-1.5 text-[13.5px] leading-[1.55] text-fg-secondary">
         <li>· 3 minutes. The server keeps the clock.</li>
