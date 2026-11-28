@@ -37,9 +37,9 @@ export function HowItWorks() {
           </p>
         </Reveal>
 
-        <ol className="mt-12 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border md:grid-cols-3">
+        <ol className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border md:grid-cols-3">
           {STEPS.map((step, i) => (
-            <Reveal as="li" key={step.n} delay={i * 0.06} className="flex flex-col bg-surface p-6">
+            <Reveal as="li" key={step.n} delay={i * 0.06} className="flex min-w-0 flex-col bg-surface p-6">
               <span className="font-mono text-[12px] text-accent">{step.n}</span>
               <h3 className="mt-3 text-base font-semibold">{step.title}</h3>
               <p className="mt-2 flex-1 text-[14px] leading-[1.6] text-fg-secondary">{step.body}</p>
