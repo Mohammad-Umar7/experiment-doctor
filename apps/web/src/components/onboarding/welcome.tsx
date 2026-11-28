@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { LogoMark } from "@/components/site/logo";
@@ -11,6 +11,8 @@ import { ease } from "@/lib/motion";
 import { OPEN_GUIDE_EVENT, WELCOME_KEY, markSeen, seen } from "@/lib/onboarding";
 
 type Path = { href: string; title: string; body: string; meta: string; icon: ReactNode; primary?: boolean };
+
+const noop = () => () => {};
 
 const icon = (d: string) => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -57,11 +59,9 @@ const PATHS: Path[] = [
 export function Welcome() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
   const reduce = useReducedMotion();
   const onPlay = pathname.startsWith("/play");
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (onPlay || pathname.startsWith("/s/") || seen(WELCOME_KEY)) return;
@@ -193,8 +193,8 @@ export function Welcome() {
               ))}
             </ul>
 
-            <div className="relative flex items-center justify-between border-t border-border px-6 py-3.5 sm:px-7">
-              <p className="text-[12px] text-fg-muted">Open source · nothing to install for the website</p>
+            <div className="relative flex items-center justify-end border-t border-border px-6 py-3.5 sm:justify-between sm:px-7">
+              <p className="text-[12px] text-fg-muted max-sm:hidden">Open source · nothing to install for the website</p>
               <button type="button" onClick={close} className="text-[13px] text-fg-secondary transition-colors hover:text-fg">
                 Just look around
               </button>
