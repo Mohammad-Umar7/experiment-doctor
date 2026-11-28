@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ function measure(target?: string): Rect | null {
   if (r.width === 0 && r.height === 0) return null;
   return { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 };
 }
+
+const noop = () => () => {};
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -73,16 +75,17 @@ export function Tour({
   const [rect, setRect] = useState<Rect | null>(null);
   const [vp, setVp] = useState({ w: 1280, h: 800 });
   const [cardH, setCardH] = useState(220);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
   const cardRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const step = steps[i];
   const last = i === steps.length - 1;
 
-  useEffect(() => setMounted(true), []);
-  useEffect(() => {
-    if (open) setI(0);
-  }, [open]);
+  // Every tour starts from its first step next time it opens.
+  const close = useCallback(() => {
+    setI(0);
+    onClose();
+  }, [onClose]);
 
   // Bring the target into view, then keep the spotlight glued to it while the page moves.
   useEffect(() => {
@@ -120,13 +123,13 @@ export function Tour({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
       else if (e.key === "ArrowRight") setI((n) => (n < steps.length - 1 ? n + 1 : n));
       else if (e.key === "ArrowLeft") setI((n) => Math.max(0, n - 1));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, steps.length]);
+  }, [open, close, steps.length]);
 
   if (!mounted || !open || !step) return null;
 
@@ -173,7 +176,7 @@ export function Tour({
           </p>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="-mr-1.5 rounded-md px-2 py-1 text-[12px] text-fg-muted transition-colors hover:bg-elevated hover:text-fg"
           >
             Skip
@@ -202,7 +205,7 @@ export function Tour({
                   Back
                 </Button>
               )}
-              <Button size="sm" autoFocus onClick={() => (last ? onClose() : setI(i + 1))}>
+              <Button size="sm" autoFocus onClick={() => (last ? close() : setI(i + 1))}>
                 {last ? "Got it" : "Next"}
                 {!last && <span aria-hidden>→</span>}
               </Button>
