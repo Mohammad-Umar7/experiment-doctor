@@ -8,13 +8,14 @@ import { Logo } from "@/components/site/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { ease } from "@/lib/motion";
+import { openGuide } from "@/lib/onboarding";
 import { REPO_URL } from "@/lib/site";
 
 const LINKS = [
   { href: "/play", label: "Human vs Doctor" },
   { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/rescue", label: "Rescue Center" },
-  { href: "/report", label: "Doctor report" },
+  { href: "/rescue", label: "Live A/B test" },
+  { href: "/report", label: "Check your code" },
 ];
 
 export function Nav() {
@@ -52,6 +53,20 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openGuide}
+            className="hidden h-9 items-center gap-1.5 rounded-md px-3 text-[13px] text-fg-secondary transition-colors hover:bg-elevated hover:text-fg sm:flex"
+            title={pathname.startsWith("/play") ? "Show how to play" : "What can I do here?"}
+            aria-label="Guide"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden>
+              <circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M8 8a2 2 0 113 1.7c-.6.4-1 .8-1 1.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="10" cy="13.8" r="0.9" fill="currentColor" />
+            </svg>
+            <span className="max-lg:hidden">Guide</span>
+          </button>
           <a
             href={REPO_URL}
             target="_blank"
@@ -106,6 +121,16 @@ export function Nav() {
                   {link.label}
                 </Link>
               ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  openGuide();
+                }}
+                className="flex h-11 items-center text-left text-sm text-fg-secondary"
+              >
+                Guide
+              </button>
               <a href={REPO_URL} target="_blank" rel="noreferrer" className="flex h-11 items-center text-sm text-fg-secondary">
                 GitHub
               </a>
