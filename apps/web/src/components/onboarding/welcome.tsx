@@ -113,14 +113,14 @@ export function Welcome() {
             aria-modal="true"
             aria-labelledby="welcome-title"
             aria-describedby="welcome-body"
-            className="relative w-full max-w-[560px] overflow-hidden rounded-[18px] border border-border-strong bg-surface shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+            className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-[560px] overflow-y-auto rounded-[18px] border border-border-strong bg-surface shadow-[0_32px_80px_rgba(0,0,0,0.6)] [scrollbar-width:none]"
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: reduce ? 0 : 0.35, ease: ease.smooth }}
           >
             <div aria-hidden className="pointer-events-none absolute -top-32 left-1/2 h-56 w-[420px] -translate-x-1/2 rounded-full bg-accent/20 blur-[80px]" />
-            <div className="relative px-6 pb-2 pt-6 sm:px-7 sm:pt-7">
+            <div className="relative px-6 pb-2 pt-5 sm:px-7 sm:pt-6">
               <div className="flex items-center justify-between">
                 <LogoMark className="h-9 w-9" />
                 <button
@@ -134,16 +134,16 @@ export function Welcome() {
                   </svg>
                 </button>
               </div>
-              <h2 id="welcome-title" className="mt-4 text-[24px] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[26px]">
+              <h2 id="welcome-title" className="mt-3 text-[24px] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[26px]">
                 A/B tests break silently.
                 <br />
                 <span className="text-fg-secondary">The Doctor finds out why.</span>
               </h2>
               <p id="welcome-body" className="mt-3 text-[14px] leading-[1.6] text-fg-secondary">
-                One wrong line of code and Flagsmith stops counting your results, with no error anywhere. Experiment Doctor
-                finds the cause, fixes it with your OK and proves the fix worked.
+                One wrong line of code and Flagsmith stops counting your results, with no error. Experiment Doctor finds the
+                cause, fixes it with your OK and proves it worked.
               </p>
-              <p className="mt-5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-muted">What do you want to do?</p>
+              <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-muted">What do you want to do?</p>
             </div>
 
             <ul className="relative space-y-2 px-4 pb-4 sm:px-5 sm:pb-5">
@@ -159,7 +159,7 @@ export function Welcome() {
                     onClick={close}
                     autoFocus={p.primary}
                     className={
-                      "group flex items-center gap-4 rounded-[12px] border px-4 py-3.5 transition-[border-color,background-color,transform] duration-150 hover:-translate-y-px " +
+                      "group flex items-center gap-4 rounded-[12px] border px-4 py-3 transition-[border-color,background-color,transform] duration-150 hover:-translate-y-px " +
                       (p.primary
                         ? "border-accent/50 bg-accent/[0.10] hover:border-accent hover:bg-accent/[0.16]"
                         : "border-border bg-canvas/50 hover:border-border-strong hover:bg-elevated")
