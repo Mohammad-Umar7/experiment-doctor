@@ -36,8 +36,8 @@ export function LabProof() {
           </p>
         </Reveal>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <Reveal className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+        <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <Reveal className="min-w-0 rounded-[var(--radius-card)] border border-border bg-surface p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-muted">Three commands</p>
             <ol className="mt-4 space-y-4">
               {STEPS.map((s, i) => (
@@ -51,13 +51,13 @@ export function LabProof() {
               ))}
             </ol>
           </Reveal>
-          <Reveal delay={0.06} className="overflow-hidden rounded-[var(--radius-card)] border border-critical/30 bg-surface">
+          <Reveal delay={0.06} className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-critical/30 bg-surface">
             <p className="border-b border-border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-critical">
               Before the fix
             </p>
             <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-[1.7] text-fg-secondary">{BEFORE}</pre>
           </Reveal>
-          <Reveal delay={0.12} className="overflow-hidden rounded-[var(--radius-card)] border border-healthy/30 bg-surface">
+          <Reveal delay={0.12} className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-healthy/30 bg-surface">
             <p className="border-b border-border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-healthy">
               After the approved patch
             </p>
