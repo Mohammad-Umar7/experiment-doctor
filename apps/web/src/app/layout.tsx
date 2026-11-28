@@ -5,6 +5,7 @@ import { Nav } from "@/components/site/nav";
 import { NavFallback } from "@/components/site/nav-fallback";
 import { Footer } from "@/components/site/footer";
 import { Providers } from "@/components/site/providers";
+import { Welcome } from "@/components/onboarding/welcome";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import "./globals.css";
 
@@ -64,6 +65,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </main>
           <Footer />
+          <Suspense fallback={null}>
+            <Welcome />
+          </Suspense>
         </Providers>
       </body>
     </html>
