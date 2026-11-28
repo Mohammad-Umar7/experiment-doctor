@@ -11,17 +11,17 @@ const WORKFLOW = `- uses: actions/checkout@v5
 export function CiGate() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto grid max-w-[1280px] items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <Reveal>
+      <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <Reveal className="min-w-0">
           <Eyebrow>CI Gate</Eyebrow>
           <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.03em] sm:text-[32px]">
             Never ship a silently broken experiment again.
           </h2>
           <p className="mt-3 max-w-[520px] text-[15px] leading-[1.6] text-fg-secondary">
             Renaming <code className="font-mono text-[13px] text-fg">purchase</code> to{" "}
-            <code className="font-mono text-[13px] text-fg">Purchase</code> passes every build, every test and every review. The
-            experiment just stops counting. The Doctor&apos;s GitHub Action diffs the experiment wiring between the base and the
-            pull request and fails the check only for what the pull request breaks. Make it a required check and it blocks the merge. Pending data never fails a build. No secrets needed.
+            <code className="font-mono text-[13px] text-fg">Purchase</code> passes every build, test and review, and the
+            experiment quietly stops counting. The Doctor&apos;s GitHub Action fails the pull request that breaks it. No secrets
+            needed.
           </p>
           <pre className="mt-6 overflow-x-auto rounded-[10px] border border-border bg-canvas px-4 py-3 font-mono text-[12.5px] leading-[1.7] text-fg-secondary">
             {WORKFLOW}
@@ -36,7 +36,7 @@ export function CiGate() {
           </a>
         </Reveal>
 
-        <Reveal delay={0.08}>
+        <Reveal delay={0.08} className="min-w-0">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
               <p className="truncate text-[13px] text-fg">
