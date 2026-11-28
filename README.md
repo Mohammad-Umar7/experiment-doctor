@@ -9,7 +9,7 @@
 An open-source debugger that diagnoses broken Flagsmith experiments, verifies repairs against real stored events,<br/>
 and catches regressions before they ship.
 
-[Live site](https://experimentdoctor.vercel.app) · [Doctor in your browser](https://experimentdoctor.vercel.app/report) · [CI Gate on a real PR](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [Human vs Doctor](https://experimentdoctor.vercel.app/play) · [Rescue Center](https://experimentdoctor.vercel.app/rescue) · Demo video: *link added before submission*
+[Live site](https://experimentdoctor.vercel.app) · [Doctor in your browser](https://experimentdoctor.vercel.app/report) · [CI Gate on a real PR](https://github.com/Mohammad-Umar7/experiment-doctor/pull/1) · [Human vs Doctor](https://experimentdoctor.vercel.app/play) · [Rescue Center](https://experimentdoctor.vercel.app/rescue) · [Demo video (2:40)](https://youtu.be/hsqRIVGJB70)
 
 </div>
 
