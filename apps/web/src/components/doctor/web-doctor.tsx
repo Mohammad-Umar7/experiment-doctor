@@ -79,17 +79,34 @@ export function WebDoctor() {
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 pb-20 pt-10 sm:px-6 sm:pt-14">
       <Eyebrow>Doctor report</Eyebrow>
-      <h1 className="mt-2 max-w-[760px] text-[32px] font-semibold tracking-[-0.03em] sm:text-[40px]">
+      <h1 className="mt-2 max-w-[760px] text-balance text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[40px]">
         Diagnose it here. Nothing leaves your browser.
       </h1>
       <p className="mt-3 max-w-[680px] text-[15px] leading-[1.6] text-fg-secondary">
-        This page runs the same diagnosis engine as the CLI, compiled into the page. Paste the file that talks to Flagsmith,
-        or open a report the CLI saved. For config checks (variant keys, warehouse, experiment status) run the CLI with your{" "}
-        <code className="font-mono text-[13px] text-fg">flagsmith login</code>.
+        The same engine as the CLI, running inside this page. For the config checks (variant keys, warehouse, experiment
+        status), run the CLI with your <code className="font-mono text-[13px] text-fg">flagsmith login</code>.
       </p>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
+      <ol className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border sm:grid-cols-3">
+        {[
+          ["Pick a sample or paste your file", "the code that calls Flagsmith"],
+          ["Match your Flagsmith setup", "flag, metric event, variant keys"],
+          ["Run the Doctor", "verdict, root cause and the exact fix"],
+        ].map(([title, detail], n) => (
+          <li key={title} className="flex min-w-0 items-center gap-3 bg-surface px-4 py-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 font-mono text-[11px] text-[#c4b0ff]">
+              {n + 1}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13.5px] font-medium text-fg">{title}</span>
+              <span className="block truncate font-mono text-[11px] text-fg-muted">{detail}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-4">
           <div className="inline-flex rounded-[10px] border border-border bg-surface p-1" role="tablist" aria-label="Input">
             {(["code", "json"] as const).map((m) => (
               <button
@@ -124,7 +141,7 @@ export function WebDoctor() {
                     id="file"
                     value={file}
                     onChange={(e) => setFile(e.target.value)}
-                    className="h-7 w-48 rounded-md bg-transparent px-1 font-mono text-[12px] text-fg focus:bg-canvas focus:outline-none"
+                    className="h-7 w-28 min-w-0 rounded-md bg-transparent px-1 font-mono text-[12px] text-fg focus:bg-canvas focus:outline-none sm:w-48"
                   />
                   <label htmlFor="sample" className="sr-only">
                     Load a sample
@@ -133,7 +150,7 @@ export function WebDoctor() {
                     id="sample"
                     value={sampleId}
                     onChange={(e) => loadSample(e.target.value)}
-                    className="ml-auto h-7 rounded-md border border-border bg-canvas px-2 font-mono text-[11px] text-fg-secondary focus:border-accent focus:outline-none"
+                    className="ml-auto h-7 min-w-0 max-w-full flex-1 truncate rounded-md border border-border bg-canvas px-2 font-mono text-[11px] text-fg-secondary focus:border-accent focus:outline-none sm:max-w-[60%] sm:flex-none"
                   >
                     {CASES.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -171,14 +188,30 @@ export function WebDoctor() {
           )}
         </div>
 
-        <div aria-live="polite">
+        <div aria-live="polite" className="min-w-0">
           {report ? (
             <ReportView report={report} />
           ) : (
             <div className="flex h-full min-h-[300px] items-center justify-center rounded-[var(--radius-card)] border border-dashed border-border-strong p-8 text-center">
-              <div>
-                <p className="text-[15px] text-fg">No report yet.</p>
-                <p className="mt-1 text-[13px] text-fg-muted">Run the Doctor on the sample, it has a bug that passes most code reviews.</p>
+              <div className="max-w-[340px]">
+                <p className="text-[15px] font-medium text-fg">Your report shows up here.</p>
+                <p className="mt-1.5 text-[13px] leading-[1.55] text-fg-muted">
+                  Try the sample first: it has a bug that passes most code reviews.
+                </p>
+                <ul className="mx-auto mt-5 w-fit space-y-1.5 text-left font-mono text-[12px] text-fg-secondary">
+                  <li>
+                    <span className="text-healthy">✓</span> a verdict you can trust
+                  </li>
+                  <li>
+                    <span className="text-healthy">✓</span> the root cause, with evidence
+                  </li>
+                  <li>
+                    <span className="text-healthy">✓</span> the exact line to change
+                  </li>
+                </ul>
+                <Button onClick={run} variant="secondary" className="mt-6">
+                  Run on the sample
+                </Button>
               </div>
             </div>
           )}
