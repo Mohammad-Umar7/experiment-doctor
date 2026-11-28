@@ -34,9 +34,9 @@ export function Install() {
           </p>
         </Reveal>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3">
           {WAYS.map((way, i) => (
-            <Reveal key={way.title} delay={i * 0.06} className="flex flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5">
+            <Reveal key={way.title} delay={i * 0.06} className="flex min-w-0 flex-col rounded-[var(--radius-card)] border border-border bg-surface p-5">
               <h3 className="text-base font-semibold">{way.title}</h3>
               <p className="mt-1.5 flex-1 text-[14px] leading-[1.6] text-fg-secondary">{way.body}</p>
               <CopyCommand command={way.command} className="mt-5" />
